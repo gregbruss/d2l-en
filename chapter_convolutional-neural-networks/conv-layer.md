@@ -70,7 +70,7 @@ Next, we implement the above process in the `corr2d` function.
 It accepts the input array `X` with the kernel array `K`
 and outputs the array `Y`.
 
-```{.python .input}
+```{.python .input  n=11}
 from mxnet import autograd, np, npx
 from mxnet.gluon import nn
 npx.set_np()
@@ -91,10 +91,23 @@ from the figure above
 to validate the output of the above implementations
 of the two-dimensional cross-correlation operation.
 
-```{.python .input}
+```{.python .input  n=16}
 X = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
 K = np.array([[0, 1], [2, 3]])
 corr2d(X, K)
+```
+
+```{.json .output n=16}
+[
+ {
+  "data": {
+   "text/plain": "array([[19., 25.],\n       [37., 43.]])"
+  },
+  "execution_count": 16,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 ## Convolutional Layers
@@ -117,7 +130,7 @@ As with $h \times w$ cross-correlation
 we also refer to convolutional layers
 as $h \times w$ convolutions.
 
-```{.python .input  n=70}
+```{.python .input  n=17}
 class Conv2D(nn.Block):
     def __init__(self, kernel_size, **kwargs):
         super(Conv2D, self).__init__(**kwargs)
@@ -136,10 +149,23 @@ by finding the location of the pixel change.
 First, we construct an 'image' of $6\times 8$ pixels.
 The middle four columns are black (0) and the rest are white (1).
 
-```{.python .input  n=66}
+```{.python .input  n=19}
 X = np.ones((6, 8))
 X[:, 2:6] = 0
 X
+```
+
+```{.json .output n=19}
+[
+ {
+  "data": {
+   "text/plain": "array([[1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.],\n       [1., 1., 0., 0., 0., 0., 1., 1.]])"
+  },
+  "execution_count": 19,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 Next, we construct a kernel `K` with a height of 1 and width of 2.
@@ -147,7 +173,7 @@ When we perform the cross-correlation operation with the input,
 if the horizontally adjacent elements are the same,
 the output is 0. Otherwise, the output is non-zero.
 
-```{.python .input  n=67}
+```{.python .input  n=20}
 K = np.array([[1, -1]])
 ```
 
@@ -157,16 +183,42 @@ As you can see, we will detect 1 for the edge from white to black
 and -1 for the edge from black to white.
 The rest of the outputs are 0.
 
-```{.python .input  n=69}
+```{.python .input  n=21}
 Y = corr2d(X, K)
 Y
+```
+
+```{.json .output n=21}
+[
+ {
+  "data": {
+   "text/plain": "array([[ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.],\n       [ 0.,  1.,  0.,  0.,  0., -1.,  0.]])"
+  },
+  "execution_count": 21,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 Let's apply the kernel to the transposed image.
 As expected, it vanishes. The kernel `K` only detects vertical edges.
 
-```{.python .input}
+```{.python .input  n=22}
 corr2d(X.T, K)
+```
+
+```{.json .output n=22}
+[
+ {
+  "data": {
+   "text/plain": "array([[0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.],\n       [0., 0., 0., 0., 0.]])"
+  },
+  "execution_count": 22,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 ## Learning a Kernel
@@ -193,7 +245,7 @@ However, since we used single-element assignments,
 Gluon has some trouble finding the gradient.
 Instead, we use the built-in `Conv2D` class provided by Gluon below.
 
-```{.python .input  n=83}
+```{.python .input  n=25}
 # Construct a convolutional layer with 1 output channel
 # (channels will be introduced in the following section)
 # and a kernel array shape of (1, 2)
@@ -206,7 +258,7 @@ conv2d.initialize()
 X = X.reshape(1, 1, 6, 8)
 Y = Y.reshape(1, 1, 6, 7)
 
-for i in range(10):
+for i in range(20):
     with autograd.record():
         Y_hat = conv2d(X)
         l = (Y_hat - Y) ** 2
@@ -217,10 +269,33 @@ for i in range(10):
         print('batch %d, loss %.3f' % (i + 1, l.sum()))
 ```
 
+```{.json .output n=25}
+[
+ {
+  "name": "stdout",
+  "output_type": "stream",
+  "text": "batch 2, loss 5.063\nbatch 4, loss 0.864\nbatch 6, loss 0.151\nbatch 8, loss 0.028\nbatch 10, loss 0.006\nbatch 12, loss 0.001\nbatch 14, loss 0.000\nbatch 16, loss 0.000\nbatch 18, loss 0.000\nbatch 20, loss 0.000\n"
+ }
+]
+```
+
 As you can see, the error has dropped to a small value after 10 iterations. Now we will take a look at the kernel array we learned.
 
-```{.python .input}
+```{.python .input  n=26}
 conv2d.weight.data().reshape(1, 2)
+```
+
+```{.json .output n=26}
+[
+ {
+  "data": {
+   "text/plain": "array([[ 1.0003173, -0.9994144]])"
+  },
+  "execution_count": 26,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 Indeed, the learned kernel array is remarkably close

@@ -46,7 +46,7 @@ that is typically exploited by humans and machine learning models alike.
 Imagine that you want to detect an object in an image.
 It seems reasonable that whatever method we use to recognize objects
 should not be overly concerned with the precise *location*
-of the object shouldn't in the image.
+of the object in the image.
 Ideally we could learn a system
 that would somehow exploit this knowledge.
 Pigs usually do not fly and planes usually do not swim.
@@ -250,3 +250,7 @@ All of this will be addressed in the remainder of the chapter.
 ## [Discussions](https://discuss.mxnet.io/t/2348)
 
 ![](../img/qr_why-conv.svg)
+
+```{.python .input}
+
+```

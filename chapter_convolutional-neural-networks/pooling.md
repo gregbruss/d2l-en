@@ -99,7 +99,7 @@ in :numref:`sec_conv_layer`.
 However, here we have no kernel, computing the output
 as either the max or the average of each region in the input..
 
-```{.python .input  n=3}
+```{.python .input  n=4}
 from mxnet import np, npx
 from mxnet.gluon import nn
 npx.set_np()
@@ -118,15 +118,41 @@ def pool2d(X, pool_size, mode='max'):
 
 We can construct the input array `X` in the above diagram to validate the output of the two-dimensional maximum pooling layer.
 
-```{.python .input  n=4}
+```{.python .input  n=5}
 X = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
 pool2d(X, (2, 2))
 ```
 
+```{.json .output n=5}
+[
+ {
+  "data": {
+   "text/plain": "array([[4., 5.],\n       [7., 8.]])"
+  },
+  "execution_count": 5,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
+```
+
 At the same time, we experiment with the average pooling layer.
 
-```{.python .input  n=14}
+```{.python .input  n=6}
 pool2d(X, (2, 2), 'avg')
+```
+
+```{.json .output n=6}
+[
+ {
+  "data": {
+   "text/plain": "array([[2., 3.],\n       [5., 6.]])"
+  },
+  "execution_count": 6,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 ## Padding and Stride
@@ -141,9 +167,22 @@ shipped in MXNet Gluon's `nn` module.
 We first construct an input data of shape `(1, 1, 4, 4)`,
 where the first two dimensions are batch and channel.
 
-```{.python .input  n=15}
+```{.python .input  n=7}
 X = np.arange(16).reshape(1, 1, 4, 4)
 X
+```
+
+```{.json .output n=7}
+[
+ {
+  "data": {
+   "text/plain": "array([[[[ 0.,  1.,  2.,  3.],\n         [ 4.,  5.,  6.,  7.],\n         [ 8.,  9., 10., 11.],\n         [12., 13., 14., 15.]]]])"
+  },
+  "execution_count": 7,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 By default, the stride in the `MaxPool2D` class
@@ -151,26 +190,65 @@ has the same shape as the pooling window.
 Below, we use a pooling window of shape `(3, 3)`,
 so we get a stride shape of `(3, 3)` by default.
 
-```{.python .input  n=16}
+```{.python .input  n=10}
 pool2d = nn.MaxPool2D(3)
 # Because there are no model parameters in the pooling layer, we do not need
 # to call the parameter initialization function
 pool2d(X)
 ```
 
+```{.json .output n=10}
+[
+ {
+  "data": {
+   "text/plain": "array([[[[10.]]]])"
+  },
+  "execution_count": 10,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
+```
+
 The stride and padding can be manually specified.
 
-```{.python .input  n=7}
+```{.python .input  n=12}
 pool2d = nn.MaxPool2D(3, padding=1, strides=2)
 pool2d(X)
+```
+
+```{.json .output n=12}
+[
+ {
+  "data": {
+   "text/plain": "array([[[[ 5.,  7.],\n         [13., 15.]]]])"
+  },
+  "execution_count": 12,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 Of course, we can specify an arbitrary rectangular pooling window
 and specify the padding and stride for height and width, respectively.
 
-```{.python .input  n=8}
+```{.python .input  n=13}
 pool2d = nn.MaxPool2D((2, 3), padding=(1, 2), strides=(2, 3))
 pool2d(X)
+```
+
+```{.json .output n=13}
+[
+ {
+  "data": {
+   "text/plain": "array([[[[ 0.,  3.],\n         [ 8., 11.],\n         [12., 15.]]]])"
+  },
+  "execution_count": 13,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 ## Multiple Channels
@@ -184,16 +262,42 @@ is the same as the number of input channels.
 Below, we will concatenate arrays `X` and `X+1`
 on the channel dimension to construct an input with 2 channels.
 
-```{.python .input  n=9}
+```{.python .input  n=14}
 X = np.concatenate((X, X + 1), axis=1)
 X
 ```
 
+```{.json .output n=14}
+[
+ {
+  "data": {
+   "text/plain": "array([[[[ 0.,  1.,  2.,  3.],\n         [ 4.,  5.,  6.,  7.],\n         [ 8.,  9., 10., 11.],\n         [12., 13., 14., 15.]],\n\n        [[ 1.,  2.,  3.,  4.],\n         [ 5.,  6.,  7.,  8.],\n         [ 9., 10., 11., 12.],\n         [13., 14., 15., 16.]]]])"
+  },
+  "execution_count": 14,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
+```
+
 As we can see, the number of output channels is still 2 after pooling.
 
-```{.python .input  n=10}
+```{.python .input  n=15}
 pool2d = nn.MaxPool2D(3, padding=1, strides=2)
 pool2d(X)
+```
+
+```{.json .output n=15}
+[
+ {
+  "data": {
+   "text/plain": "array([[[[ 5.,  7.],\n         [13., 15.]],\n\n        [[ 6.,  8.],\n         [14., 16.]]]])"
+  },
+  "execution_count": 15,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 ## Summary

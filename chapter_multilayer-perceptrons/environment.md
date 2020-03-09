@@ -3,7 +3,7 @@
 So far, we have worked through a number of hands-on implementations
 fitting machine learning models to a variety of datasets.
 And yet, until now we skated over the matter
-of where are data comes from in the first place,
+of where our data comes from in the first place,
 and what we plan to ultimately *do* with the outputs from our models.
 Too often in the practice of machine learning,
 developers rush ahead with the development of models
@@ -502,3 +502,7 @@ Should what news someone is exposed to be determined by which Facebook pages the
 ## [Discussions](https://discuss.mxnet.io/t/2347)
 
 ![](../img/qr_environment.svg)
+
+```{.python .input}
+
+```

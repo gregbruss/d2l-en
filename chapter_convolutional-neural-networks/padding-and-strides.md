@@ -117,6 +117,19 @@ X = np.random.uniform(size=(8, 8))
 comp_conv2d(conv2d, X).shape
 ```
 
+```{.json .output n=1}
+[
+ {
+  "data": {
+   "text/plain": "(8, 8)"
+  },
+  "execution_count": 1,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
+```
+
 When the height and width of the convolution kernel are different,
 we can make the output and input have the same height and width by setting different padding numbers for height and width.
 
@@ -126,6 +139,19 @@ we can make the output and input have the same height and width by setting diffe
 # respectively
 conv2d = nn.Conv2D(1, kernel_size=(5, 3), padding=(2, 1))
 comp_conv2d(conv2d, X).shape
+```
+
+```{.json .output n=2}
+[
+ {
+  "data": {
+   "text/plain": "(8, 8)"
+  },
+  "execution_count": 2,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 ## Stride
@@ -171,16 +197,42 @@ then the output shape will be $(n_h/s_h) \times (n_w/s_w)$.
 Below, we set the strides on both the height and width to $2$,
 thus halving the input height and width.
 
-```{.python .input}
+```{.python .input  n=3}
 conv2d = nn.Conv2D(1, kernel_size=3, padding=1, strides=2)
 comp_conv2d(conv2d, X).shape
 ```
 
+```{.json .output n=3}
+[
+ {
+  "data": {
+   "text/plain": "(4, 4)"
+  },
+  "execution_count": 3,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
+```
+
 Next, we will look at a slightly more complicated example.
 
-```{.python .input  n=3}
+```{.python .input  n=4}
 conv2d = nn.Conv2D(1, kernel_size=(3, 5), padding=(0, 1), strides=(3, 4))
 comp_conv2d(conv2d, X).shape
+```
+
+```{.json .output n=4}
+[
+ {
+  "data": {
+   "text/plain": "(2, 2)"
+  },
+  "execution_count": 4,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 For the sake of brevity, when the padding number

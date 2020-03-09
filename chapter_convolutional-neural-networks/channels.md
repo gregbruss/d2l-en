@@ -57,7 +57,7 @@ we can implement cross-correlation operations with multiple input channels ourse
 Notice that all we are doing is performing one cross-correlation operation
 per channel and then adding up the results using the `add_n` function.
 
-```{.python .input  n=1}
+```{.python .input  n=2}
 import d2l
 from mxnet import np, npx
 npx.set_np()
@@ -73,12 +73,25 @@ We can construct the input array `X` and the kernel array `K`
 corresponding to the values in the above diagram
 to validate the output of the cross-correlation operation.
 
-```{.python .input  n=2}
+```{.python .input  n=3}
 X = np.array([[[0, 1, 2], [3, 4, 5], [6, 7, 8]],
               [[1, 2, 3], [4, 5, 6], [7, 8, 9]]])
 K = np.array([[[0, 1], [2, 3]], [[1, 2], [3, 4]]])
 
 corr2d_multi_in(X, K)
+```
+
+```{.json .output n=3}
+[
+ {
+  "data": {
+   "text/plain": "array([[ 56.,  72.],\n       [104., 120.]])"
+  },
+  "execution_count": 3,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 ## Multiple Output Channels
@@ -116,7 +129,7 @@ and takes input from all channels in the input array.
 We implement a cross-correlation function
 to calculate the output of multiple channels as shown below.
 
-```{.python .input  n=3}
+```{.python .input  n=5}
 def corr2d_multi_in_out(X, K):
     # Traverse along the 0th dimension of K, and each time, perform
     # cross-correlation operations with input X. All of the results are merged
@@ -128,9 +141,22 @@ We construct a convolution kernel with 3 output channels
 by concatenating the kernel array `K` with `K+1`
 (plus one for each element in `K`) and `K+2`.
 
-```{.python .input  n=4}
+```{.python .input  n=6}
 K = np.stack((K, K + 1, K + 2))
 K.shape
+```
+
+```{.json .output n=6}
+[
+ {
+  "data": {
+   "text/plain": "(3, 2, 2, 2)"
+  },
+  "execution_count": 6,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 Below, we perform cross-correlation operations
@@ -141,8 +167,21 @@ with the result of the previous input array `X`
 and the multi-input channel,
 single-output channel kernel.
 
-```{.python .input  n=5}
+```{.python .input  n=7}
 corr2d_multi_in_out(X, K)
+```
+
+```{.json .output n=7}
+[
+ {
+  "data": {
+   "text/plain": "array([[[ 56.,  72.],\n        [104., 120.]],\n\n       [[ 76., 100.],\n        [148., 172.]],\n\n       [[ 96., 128.],\n        [192., 224.]]])"
+  },
+  "execution_count": 7,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 ## $1\times 1$ Convolutional Layer
@@ -188,7 +227,7 @@ using a fully-connected layer.
 The only thing is that we need to make some adjustments
 to the data shape before and after the matrix multiplication.
 
-```{.python .input  n=6}
+```{.python .input  n=8}
 def corr2d_multi_in_out_1x1(X, K):
     c_i, h, w = X.shape
     c_o = K.shape[0]
@@ -202,7 +241,7 @@ When performing $1\times 1$ convolution,
 the above function is equivalent to the previously implemented cross-correlation function `corr2d_multi_in_out`.
 Let's check this with some reference data.
 
-```{.python .input  n=7}
+```{.python .input  n=9}
 X = np.random.uniform(size=(3, 3, 3))
 K = np.random.uniform(size=(2, 3, 1, 1))
 
@@ -210,6 +249,19 @@ Y1 = corr2d_multi_in_out_1x1(X, K)
 Y2 = corr2d_multi_in_out(X, K)
 
 np.abs(Y1 - Y2).sum() < 1e-6
+```
+
+```{.json .output n=9}
+[
+ {
+  "data": {
+   "text/plain": "array(True)"
+  },
+  "execution_count": 9,
+  "metadata": {},
+  "output_type": "execute_result"
+ }
+]
 ```
 
 ## Summary
