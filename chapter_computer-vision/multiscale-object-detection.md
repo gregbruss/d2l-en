@@ -4,12 +4,12 @@ In :numref:`sec_anchor`, we generated multiple anchor boxes centered on each pix
 
 It is not difficult to reduce the number of anchor boxes.  An easy way is to apply uniform sampling on a small portion of pixels from the input image and generate anchor boxes centered on the sampled pixels. In addition, we can generate anchor boxes of varied numbers and sizes on multiple scales. Notice that smaller objects are more likely to be positioned on the image than larger ones.  Here, we will use a simple example: Objects with shapes of $1 \times 1$, $1 \times 2$, and $2 \times 2$ may have 4, 2, and 1 possible position(s) on an image with the shape $2 \times 2$. Therefore, when using smaller anchor boxes to detect smaller objects, we can sample more regions; when using larger anchor boxes to detect larger objects, we can sample fewer regions.
 
-To demonstrate how to generate anchor boxes on multiple scales, let's read an image first.  It has a height and width of $561 \times 728$ pixels.
+To demonstrate how to generate anchor boxes on multiple scales, let us read an image first.  It has a height and width of $561 \times 728$ pixels.
 
 ```{.python .input  n=1}
 %matplotlib inline
-import d2l
-from mxnet import contrib, image, np, npx
+from d2l import mxnet as d2l
+from mxnet import image, np, npx
 
 npx.set_np()
 
@@ -26,7 +26,7 @@ The function `display_anchors` is defined below.  We are going to generate ancho
 
 ```{.python .input  n=2}
 def display_anchors(fmap_w, fmap_h, s):
-    d2l.set_figsize((3.5, 2.5))
+    d2l.set_figsize()
     # The values from the first two dimensions will not affect the output
     fmap = np.zeros((1, 10, fmap_w, fmap_h))
     anchors = npx.multibox_prior(fmap, sizes=s, ratios=[1, 2, 0.5])
@@ -87,6 +87,6 @@ We will implement a multiscale object detection model in the following section.
 
 1. Given an input image, assume $1 \times c_i \times h \times w$ to be the shape of the feature map while $c_i, h, w$ are the number, height, and width of the feature map. What methods can you think of to convert this variable into the anchor box's category and offset? What is the shape of the output?
 
-## [Discussions](https://discuss.mxnet.io/t/2446)
-
-![](../img/qr_multiscale-object-detection.svg)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/371)
+:end_tab:

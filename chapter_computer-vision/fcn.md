@@ -17,7 +17,7 @@ explain the transposed convolution layer.
 
 ```{.python .input  n=2}
 %matplotlib inline
-import d2l
+from d2l import mxnet as d2l
 from mxnet import gluon, image, init, np, npx
 from mxnet.gluon import nn
 
@@ -31,7 +31,7 @@ Here, we demonstrate the most basic design of a fully convolutional network mode
 ![Fully convolutional network. ](../img/fcn.svg)
 :label:`fig_fcn`
 
-Below, we use a ResNet-18 model pre-trained on the ImageNet dataset to extract image features and record the network instance as `pretrained_net`. As you can see, the last two layers of the model member variable `features` are the global maximum pooling layer `GlobalAvgPool2D` and example flattening layer `Flatten`. The `output` module contains the fully connected layer used for output. These layers are not required for a fully convolutional network.
+Below, we use a ResNet-18 model pre-trained on the ImageNet dataset to extract image features and record the network instance as `pretrained_net`. As you can see, the last two layers of the model member variable `features` are the global average pooling layer `GlobalAvgPool2D` and example flattening layer `Flatten`. The `output` module contains the fully connected layer used for output. These layers are not required for a fully convolutional network.
 
 ```{.python .input  n=5}
 pretrained_net = gluon.model_zoo.vision.resnet18_v2(pretrained=True)
@@ -113,7 +113,7 @@ out_img = Y[0].transpose(1, 2, 0)
 As you can see, the transposed convolution layer magnifies both the height and width of the image by a factor of 2. It is worth mentioning that, besides to the difference in coordinate scale, the image magnified by bilinear interpolation and original image printed in :numref:`sec_bbox` look the same.
 
 ```{.python .input}
-d2l.set_figsize((3.5, 2.5))
+d2l.set_figsize()
 print('input image shape:', img.shape)
 d2l.plt.imshow(img.asnumpy());
 print('output image shape:', out_img.shape)
@@ -142,12 +142,12 @@ train_iter, test_iter = d2l.load_data_voc(batch_size, crop_size)
 Now we can start training the model. The loss function and accuracy calculation here are not substantially different from those used in image classification. Because we use the channel of the transposed convolution layer to predict pixel categories, the `axis=1` (channel dimension) option is specified in `SoftmaxCrossEntropyLoss`. In addition, the model calculates the accuracy based on whether the prediction category of each pixel is correct.
 
 ```{.python .input  n=12}
-num_epochs, lr, wd, ctx = 5, 0.1, 1e-3, d2l.try_all_gpus()
+num_epochs, lr, wd, devices = 5, 0.1, 1e-3, d2l.try_all_gpus()
 loss = gluon.loss.SoftmaxCrossEntropyLoss(axis=1)
-net.collect_params().reset_ctx(ctx)
+net.collect_params().reset_ctx(devices)
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'learning_rate': lr, 'wd': wd})
-d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, ctx)
+d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
 ## Prediction
@@ -158,7 +158,7 @@ During predicting, we need to standardize the input image in each channel and tr
 def predict(img):
     X = test_iter._dataset.normalize_image(img)
     X = np.expand_dims(X.transpose(2, 0, 1), axis=0)
-    pred = net(X.as_in_context(ctx[0])).argmax(axis=1)
+    pred = net(X.as_in_ctx(devices[0])).argmax(axis=1)
     return pred.reshape(pred.shape[1], pred.shape[2])
 ```
 
@@ -166,7 +166,7 @@ To visualize the predicted categories for each pixel, we map the predicted categ
 
 ```{.python .input  n=14}
 def label2image(pred):
-    colormap = np.array(d2l.VOC_COLORMAP, ctx=ctx[0], dtype='uint8')
+    colormap = np.array(d2l.VOC_COLORMAP, ctx=devices[0], dtype='uint8')
     X = pred.astype('int32')
     return colormap[X, :]
 ```
@@ -196,11 +196,11 @@ d2l.show_images(imgs[::3] + imgs[1::3] + imgs[2::3], 3, n, scale=2);
 ## Exercises
 
 1. If we use Xavier to randomly initialize the transposed convolution layer, what will happen to the result?
-1. Can you further improve the accuracy of the model by tuning the hyper-parameters?
+1. Can you further improve the accuracy of the model by tuning the hyperparameters?
 1. Predict the categories of all pixels in the test image.
 1. The outputs of some intermediate layers of the convolutional neural network are also used in the paper on fully convolutional networks[1]. Try to implement this idea.
 
 
-## [Discussions](https://discuss.mxnet.io/t/2454)
-
-![](../img/qr_fcn.svg)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/377)
+:end_tab:

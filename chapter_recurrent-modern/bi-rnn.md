@@ -8,13 +8,13 @@ So far we assumed that our goal is to model the next word given what we have see
 2. `I am _____ very hungry.`
 3. `I am _____ very hungry, I could eat half a pig.`
 
-Depending on the amount of information available, we might fill the blanks with very different words such as "happy", "not", and "very". Clearly the end of the phrase (if available) conveys significant information about which word to pick. A sequence model that is incapable of taking advantage of this will perform poorly on related tasks. For instance, to do well in named entity recognition (e.g., to recognize whether "Green" refers to "Mr. Green" or to the color) longer-range context is equally vital. To get some inspiration for addressing the problem let's take a detour to graphical models.
+Depending on the amount of information available, we might fill the blanks with very different words such as "happy", "not", and "very". Clearly the end of the phrase (if available) conveys significant information about which word to pick. A sequence model that is incapable of taking advantage of this will perform poorly on related tasks. For instance, to do well in named entity recognition (e.g., to recognize whether "Green" refers to "Mr. Green" or to the color) longer-range context is equally vital. To get some inspiration for addressing the problem let us take a detour to graphical models.
 
 ## Dynamic Programming
 
 This section serves to illustrate the dynamic programming problem. The specific technical details do not matter for understanding the deep learning counterpart but they help in motivating why one might use deep learning and why one might pick specific architectures.
 
-If we want to solve the problem using graphical models we could for instance design a latent variable model as follows. We assume that there exists some latent variable $h_t$ which governs the emissions $x_t$ that we observe via $p(x_t \mid h_t)$. Moreover, the transitions $h_t \to h_{t+1}$ are given by some state transition probability $p(h_t+1 \mid h_{t})$. The graphical model is then a Hidden Markov Model (HMM) as in :numref:`fig_hmm`.
+If we want to solve the problem using graphical models we could for instance design a latent variable model as follows. We assume that there exists some latent variable $h_t$ which governs the emissions $x_t$ that we observe via $p(x_t \mid h_t)$. Moreover, the transitions $h_t \to h_{t+1}$ are given by some state transition probability $p(h_{t+1} \mid h_{t})$. The graphical model is then a Hidden Markov Model (HMM) as in :numref:`fig_hmm`.
 
 ![ Hidden Markov Model. ](../img/hmm.svg)
 :label:`fig_hmm`
@@ -49,7 +49,7 @@ $$\begin{aligned}
     \underbrace{\left[\sum_{h_T} p(h_T \mid h_{T-1}) p(x_T \mid h_T)\right]}_{=: \rho_{T-1}(h_{T-1})} \\
     & = \sum_{h_1, \ldots, h_{T-2}} \prod_{t=1}^{T-2} p(h_t \mid h_{t-1}) p(x_t \mid h_t) \cdot
     \underbrace{\left[\sum_{h_{T-1}} p(h_{T-1} \mid h_{T-2}) p(x_{T-1} \mid h_{T-1}) \rho_{T-1}(h_{T-1}) \right]}_{=: \rho_{T-2}(h_{T-2})} \\
-    & = \ldots \\
+    & = \ldots, \\
     & = \sum_{h_1} p(h_1) p(x_1 \mid h_1)\rho_{1}(h_{1}).
 \end{aligned}$$
 
@@ -78,9 +78,9 @@ In fact, this is not too dissimilar to the forward and backward recursion we enc
 
 ### Definition
 
-Bidirectional RNNs were introduced by :cite:`Schuster.Paliwal.1997`. For a detailed discussion of the various architectures see also the paper by :cite:`Graves.Schmidhuber.2005`. Let's look at the specifics of such a network.
+Bidirectional RNNs were introduced by :cite:`Schuster.Paliwal.1997`. For a detailed discussion of the various architectures see also the paper by :cite:`Graves.Schmidhuber.2005`. Let us look at the specifics of such a network.
 
-For a given timestep $t$, the minibatch input is $\mathbf{X}_t \in \mathbb{R}^{n \times d}$ (number of examples: $n$, number of inputs: $d$) and the hidden layer activation function is $\phi$. In the bidirectional architecture, we assume that the forward and backward hidden states for this timestep are $\overrightarrow{\mathbf{H}}_t  \in \mathbb{R}^{n \times h}$ and $\overleftarrow{\mathbf{H}}_t  \in \mathbb{R}^{n \times h}$ respectively. Here $h$ indicates the number of hidden units. We compute the forward and backward hidden state updates as follows:
+For a given time step $t$, the minibatch input is $\mathbf{X}_t \in \mathbb{R}^{n \times d}$ (number of examples: $n$, number of inputs: $d$) and the hidden layer activation function is $\phi$. In the bidirectional architecture, we assume that the forward and backward hidden states for this time step are $\overrightarrow{\mathbf{H}}_t  \in \mathbb{R}^{n \times h}$ and $\overleftarrow{\mathbf{H}}_t  \in \mathbb{R}^{n \times h}$ respectively. Here $h$ indicates the number of hidden units. We compute the forward and backward hidden state updates as follows:
 
 
 $$
@@ -103,7 +103,8 @@ Here, the weight parameter $\mathbf{W}_{hq} \in \mathbb{R}^{2h \times q}$ and th
 
 One of the key features of a bidirectional RNN is that information from both ends of the sequence is used to estimate the output. That is, we use information from both future and past observations to predict the current one (a smoothing scenario). In the case of language models this is not quite what we want. After all, we do not have the luxury of knowing the next to next symbol when predicting the next one. Hence, if we were to use a bidirectional RNN naively we would not get a very good accuracy: during training we have past and future data to estimate the present. During test time we only have past data and thus poor accuracy (we will illustrate this in an experiment below).
 
-To add insult to injury bidirectional RNNs are also exceedingly slow. The main reason for this is that they require both a forward and a backward pass and that the backward pass is dependent on the outcomes of the forward pass. Hence, gradients will have a very long dependency chain.
+To add insult to injury, bidirectional RNNs are also exceedingly slow. The main reasons for this are that they require both a forward and a backward pass and that the backward pass is dependent on the outcomes of the forward propagation. Hence, gradients will have a very long dependency chain.
+
 
 In practice bidirectional layers are used very sparingly and only for a narrow set of applications, such as filling in missing words, annotating tokens (e.g., for named entity recognition), or encoding sequences wholesale as a step in a sequence processing pipeline (e.g., for machine translation). In short, handle with care!
 
@@ -113,21 +114,41 @@ In practice bidirectional layers are used very sparingly and only for a narrow s
 If we were to ignore all advice regarding the fact that bidirectional LSTMs use past and future data and simply apply it to language models, we will get estimates with acceptable perplexity. Nonetheless, the ability of the model to predict future symbols is severely compromised as the example below illustrates. Despite reasonable perplexity, it only generates gibberish even after many iterations. We include the code below as a cautionary example against using them in the wrong context.
 
 ```{.python .input}
-import d2l
+from d2l import mxnet as d2l
 from mxnet import npx
 from mxnet.gluon import rnn
 npx.set_np()
 
 # Load data
-batch_size, num_steps = 32, 35
+batch_size, num_steps, device = 32, 35, d2l.try_gpu()
 train_iter, vocab = d2l.load_data_time_machine(batch_size, num_steps)
 # Define the model
-vocab_size, num_hiddens, num_layers, ctx = len(vocab), 256, 2, d2l.try_gpu()
+vocab_size, num_hiddens, num_layers = len(vocab), 256, 2
 lstm_layer = rnn.LSTM(num_hiddens, num_layers, bidirectional=True)
 model = d2l.RNNModel(lstm_layer, len(vocab))
 # Train the model
 num_epochs, lr = 500, 1
-d2l.train_ch8(model, train_iter, vocab, lr, num_epochs, ctx)
+d2l.train_ch8(model, train_iter, vocab, lr, num_epochs, device)
+```
+
+```{.python .input}
+#@tab pytorch
+from d2l import torch as d2l
+import torch
+from torch import nn
+
+# Load data
+batch_size, num_steps, device = 32, 35, d2l.try_gpu()
+train_iter, vocab = d2l.load_data_time_machine(batch_size, num_steps)
+# Define the model
+vocab_size, num_hiddens, num_layers = len(vocab), 256, 2
+num_inputs = vocab_size
+lstm_layer = nn.LSTM(num_inputs, num_hiddens, num_layers, bidirectional=True)
+model = d2l.RNNModel(lstm_layer, len(vocab))
+model = model.to(device)
+# Train the model
+num_epochs, lr = 500, 1
+d2l.train_ch8(model, train_iter, vocab, lr, num_epochs, device)
 ```
 
 The output is clearly unsatisfactory for the reasons described above. For a
@@ -136,7 +157,7 @@ classification in :numref:`sec_sentiment_rnn`.
 
 ## Summary
 
-* In bidirectional recurrent neural networks, the hidden state for each timestep is simultaneously determined by the data prior to and after the current timestep.
+* In bidirectional recurrent neural networks, the hidden state for each time step is simultaneously determined by the data prior to and after the current time step.
 * Bidirectional RNNs bear a striking resemblance with the forward-backward algorithm in graphical models.
 * Bidirectional RNNs are mostly useful for sequence embedding and the estimation of observations given bidirectional context.
 * Bidirectional RNNs are very costly to train due to long gradient chains.
@@ -147,7 +168,10 @@ classification in :numref:`sec_sentiment_rnn`.
 1. Design a bidirectional recurrent neural network with multiple hidden layers.
 1. Implement a sequence classification algorithm using bidirectional RNNs. Hint: use the RNN to embed each word and then aggregate (average) all embedded outputs before sending the output into an MLP for classification. For instance, if we have $(\mathbf{o}_1, \mathbf{o}_2, \mathbf{o}_3)$, we compute $\bar{\mathbf{o}} = \frac{1}{3} \sum_i \mathbf{o}_i$ first and then use the latter for sentiment classification.
 
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/339)
+:end_tab:
 
-## [Discussions](https://discuss.mxnet.io/t/2370)
-
-![](../img/qr_bi-rnn.svg)
+:begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1059)
+:end_tab:

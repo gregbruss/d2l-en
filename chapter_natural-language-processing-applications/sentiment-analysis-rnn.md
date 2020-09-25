@@ -13,10 +13,9 @@ negative emotion.
 :label:`fig_nlp-map-sa-rnn`
 
 ```{.python .input  n=1}
-import d2l
+from d2l import mxnet as d2l
 from mxnet import gluon, init, np, npx
 from mxnet.gluon import nn, rnn
-from mxnet.contrib import text
 npx.set_np()
 
 batch_size = 64
@@ -30,7 +29,7 @@ layer. Then, we further encode the feature sequence using a bidirectional
 recurrent neural network to obtain sequence information. Finally, we transform
 the encoded sequence information to output through the fully connected
 layer. Specifically, we can concatenate hidden states of bidirectional
-long-short term memory in the initial timestep and final timestep and pass it
+long-short term memory in the initial time step and final time step and pass it
 to the output layer classification as encoded feature sequence information. In
 the `BiRNN` class implemented below, the `Embedding` instance is the embedding
 layer, the `LSTM` instance is the hidden layer for sequence encoding, and the
@@ -42,26 +41,26 @@ class BiRNN(nn.Block):
                  num_layers, **kwargs):
         super(BiRNN, self).__init__(**kwargs)
         self.embedding = nn.Embedding(vocab_size, embed_size)
-        # Set Bidirectional to True to get a bidirectional recurrent neural
+        # Set `bidirectional` to True to get a bidirectional recurrent neural
         # network
         self.encoder = rnn.LSTM(num_hiddens, num_layers=num_layers,
                                 bidirectional=True, input_size=embed_size)
         self.decoder = nn.Dense(2)
 
     def forward(self, inputs):
-        # The shape of inputs is (batch size, number of words). Because LSTM
+        # The shape of `inputs` is (batch size, no. of words). Because LSTM
         # needs to use sequence as the first dimension, the input is
         # transformed and the word feature is then extracted. The output shape
-        # is (number of words, batch size, word vector dimension).
+        # is (no. of words, batch size, word vector dimension).
         embeddings = self.embedding(inputs.T)
         # Since the input (embeddings) is the only argument passed into
         # rnn.LSTM, it only returns the hidden states of the last hidden layer
-        # at different timestep (outputs). The shape of outputs is
-        # (number of words, batch size, 2 * number of hidden units).
+        # at different time step (outputs). The shape of `outputs` is
+        # (no. of words, batch size, 2 * no. of hidden units).
         outputs = self.encoder(embeddings)
-        # Concatenate the hidden states of the initial timestep and final
-        # timestep to use as the input of the fully connected layer. Its
-        # shape is (batch size, 4 * number of hidden units)
+        # Concatenate the hidden states of the initial time step and final
+        # time step to use as the input of the fully connected layer. Its
+        # shape is (batch size, 4 * no. of hidden units)
         encoding = np.concatenate((outputs[0], outputs[-1]), axis=1)
         outs = self.decoder(encoding)
         return outs
@@ -70,9 +69,9 @@ class BiRNN(nn.Block):
 Create a bidirectional recurrent neural network with two hidden layers.
 
 ```{.python .input}
-embed_size, num_hiddens, num_layers, ctx = 100, 100, 2, d2l.try_all_gpus()
+embed_size, num_hiddens, num_layers, devices = 100, 100, 2, d2l.try_all_gpus()
 net = BiRNN(len(vocab), embed_size, num_hiddens, num_layers)
-net.initialize(init.Xavier(), ctx=ctx)
+net.initialize(init.Xavier(), ctx=devices)
 ```
 
 ### Loading Pre-trained Word Vectors
@@ -80,14 +79,13 @@ net.initialize(init.Xavier(), ctx=ctx)
 Because the training dataset for sentiment classification is not very large, in order to deal with overfitting, we will directly use word vectors pre-trained on a larger corpus as the feature vectors of all words. Here, we load a 100-dimensional GloVe word vector for each word in the dictionary `vocab`.
 
 ```{.python .input}
-glove_embedding = text.embedding.create(
-    'glove', pretrained_file_name='glove.6B.100d.txt')
+glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
 ```
 
 Query the word vectors that in our vocabulary.
 
 ```{.python .input}
-embeds = glove_embedding.get_vecs_by_tokens(vocab.idx_to_token)
+embeds = glove_embedding[vocab.idx_to_token]
 embeds.shape
 ```
 
@@ -106,13 +104,13 @@ Now, we can start training.
 lr, num_epochs = 0.01, 5
 trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
-d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, ctx)
+d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
 Finally, define the prediction function.
 
 ```{.python .input  n=49}
-# Saved in the d2l package for later use
+#@save
 def predict_sentiment(net, vocab, sentence):
     sentence = np.array(vocab[sentence.split()], ctx=d2l.try_gpu())
     label = np.argmax(net(sentence.reshape(1, -1)), axis=1)
@@ -137,11 +135,11 @@ predict_sentiment(net, vocab, 'this movie is so bad')
 
 ## Exercises
 
-1. Increase the number of epochs. What accuracy rate can you achieve on the training and testing datasets? What about trying to re-tune other hyper-parameters?
+1. Increase the number of epochs. What accuracy rate can you achieve on the training and testing datasets? What about trying to re-tune other hyperparameters?
 1. Will using larger pre-trained word vectors, such as 300-dimensional GloVe word vectors, improve classification accuracy?
 1. Can we improve the classification accuracy by using the spaCy word tokenization tool? You need to install spaCy: `pip install spacy` and install the English package: `python -m spacy download en`. In the code, first import spacy: `import spacy`. Then, load the spacy English package: `spacy_en = spacy.load('en')`. Finally, define the function `def tokenizer(text): return [tok.text for tok in spacy_en.tokenizer(text)]` and replace the original `tokenizer` function. It should be noted that GloVe's word vector uses "-" to connect each word when storing noun phrases. For example, the phrase "new york" is represented as "new-york" in GloVe. After using spaCy tokenization, "new york" may be stored as "new york".
 
 
-## [Discussions](https://discuss.mxnet.io/t/2391)
-
-![](../img/qr_sentiment-analysis-rnn.svg)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/392)
+:end_tab:

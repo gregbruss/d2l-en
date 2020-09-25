@@ -1,5 +1,5 @@
 # Pretraining word2vec
-:label:`sec_word2vec_gluon`
+:label:`sec_word2vec_pretraining`
 
 In this section, we will train a skip-gram model defined in
 :numref:`sec_word2vec`.
@@ -7,13 +7,14 @@ In this section, we will train a skip-gram model defined in
 First, import the packages and modules required for the experiment, and load the PTB dataset.
 
 ```{.python .input  n=1}
-import d2l
+from d2l import mxnet as d2l
 from mxnet import autograd, gluon, np, npx
 from mxnet.gluon import nn
 npx.set_np()
 
 batch_size, max_window_size, num_noise_words = 512, 5, 5
-data_iter, vocab = d2l.load_data_ptb(512, 5, 5)
+data_iter, vocab = d2l.load_data_ptb(batch_size, max_window_size,
+                                     num_noise_words)
 ```
 
 ## The Skip-Gram Model
@@ -39,7 +40,7 @@ embed(x)
 
 ### Minibatch Multiplication
 
-We can multiply the matrices in two minibatches one by one, by the minibatch multiplication operation `batch_dot`. Suppose the first batch contains $n$ matrices $\mathbf{X}_1, \ldots, \mathbf{X}_n$ with a shape of $a\times b$, and the second batch contains $n$ matrices $\mathbf{Y}_1, \ldots, \mathbf{Y}_n$ with a shape of $b\times c$. The output of matrix multiplication on these two batches are $n$ matrices $\mathbf{X}_1\mathbf{Y}_1, \ldots, \mathbf{X}_n\mathbf{Y}_n$ with a shape of $a\times c$. Therefore, given two `ndarray`s of shape ($n$, $a$, $b$) and ($n$, $b$, $c$), the shape of the minibatch multiplication output is ($n$, $a$, $c$).
+We can multiply the matrices in two minibatches one by one, by the minibatch multiplication operation `batch_dot`. Suppose the first batch contains $n$ matrices $\mathbf{X}_1, \ldots, \mathbf{X}_n$ with a shape of $a\times b$, and the second batch contains $n$ matrices $\mathbf{Y}_1, \ldots, \mathbf{Y}_n$ with a shape of $b\times c$. The output of matrix multiplication on these two batches are $n$ matrices $\mathbf{X}_1\mathbf{Y}_1, \ldots, \mathbf{X}_n\mathbf{Y}_n$ with a shape of $a\times c$. Therefore, given two tensors of shape ($n$, $a$, $b$) and ($n$, $b$, $c$), the shape of the minibatch multiplication output is ($n$, $a$, $c$).
 
 ```{.python .input  n=17}
 X = np.ones((2, 1, 4))
@@ -110,18 +111,18 @@ net.add(nn.Embedding(input_dim=len(vocab), output_dim=embed_size),
 The training function is defined below. Because of the existence of padding, the calculation of the loss function is slightly different compared to the previous training functions.
 
 ```{.python .input  n=21}
-def train(net, data_iter, lr, num_epochs, ctx=d2l.try_gpu()):
-    net.initialize(ctx=ctx, force_reinit=True)
+def train(net, data_iter, lr, num_epochs, device=d2l.try_gpu()):
+    net.initialize(ctx=device, force_reinit=True)
     trainer = gluon.Trainer(net.collect_params(), 'adam',
                             {'learning_rate': lr})
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[0, num_epochs])
     for epoch in range(num_epochs):
         timer = d2l.Timer()
-        metric = d2l.Accumulator(2)  # loss_sum, num_tokens
+        metric = d2l.Accumulator(2)  # Sum of losses, no. of tokens
         for i, batch in enumerate(data_iter):
             center, context_negative, mask, label = [
-                data.as_in_context(ctx) for data in batch]
+                data.as_in_ctx(device) for data in batch]
             with autograd.record():
                 pred = skip_gram(center, context_negative, net[0], net[1])
                 l = (loss(pred.reshape(label.shape), label, mask)
@@ -132,8 +133,8 @@ def train(net, data_iter, lr, num_epochs, ctx=d2l.try_gpu()):
             if (i+1) % 50 == 0:
                 animator.add(epoch+(i+1)/len(data_iter),
                              (metric[0]/metric[1],))
-    print('loss %.3f, %d tokens/sec on %s ' % (
-        metric[0]/metric[1], metric[1]/timer.stop(), ctx))
+    print(f'loss {metric[0] / metric[1]:.3f}, '
+          f'{metric[1] / timer.stop():.1f} tokens/sec on {str(device)}')
 ```
 
 Now, we can train a skip-gram model using negative sampling.
@@ -155,7 +156,7 @@ def get_similar_tokens(query_token, k, embed):
     cos = np.dot(W, x) / np.sqrt(np.sum(W * W, axis=1) * np.sum(x * x) + 1e-9)
     topk = npx.topk(cos, k=k+1, ret_typ='indices').asnumpy().astype('int32')
     for i in topk[1:]:  # Remove the input words
-        print('cosine sim=%.3f: %s' % (cos[i], (vocab.idx_to_token[i])))
+        print(f'cosine sim={float(cos[i]):.3f}: {vocab.idx_to_token[i]}')
 
 get_similar_tokens('chip', 3, net[0])
 ```
@@ -169,10 +170,10 @@ get_similar_tokens('chip', 3, net[0])
 
 1. Set `sparse_grad=True` when creating an instance of `nn.Embedding`. Does it accelerate training? Look up MXNet documentation to learn the meaning of this argument.
 1. Try to find synonyms for other words.
-1. Tune the hyper-parameters and observe and analyze the experimental results.
+1. Tune the hyperparameters and observe and analyze the experimental results.
 1. When the dataset is large, we usually sample the context words and the noise words for the central target word in the current minibatch only when updating the model parameters. In other words, the same central target word may have different context words or noise words in different epochs. What are the benefits of this sort of training? Try to implement this training method.
 
 
-## [Discussions](https://discuss.mxnet.io/t/2387)
-
-![](../img/qr_word2vec-pretraining.svg)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/384)
+:end_tab:

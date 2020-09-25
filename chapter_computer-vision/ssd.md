@@ -68,8 +68,8 @@ convolutional layer remain unchanged.
 
 ```{.python .input  n=1}
 %matplotlib inline
-import d2l
-from mxnet import autograd, contrib, gluon, image, init, np, npx
+from d2l import mxnet as d2l
+from mxnet import autograd, gluon, image, init, np, npx
 from mxnet.gluon import nn
 
 npx.set_np()
@@ -204,18 +204,17 @@ class TinySSD(nn.Block):
         self.num_classes = num_classes
         for i in range(5):
             # The assignment statement is self.blk_i = get_blk(i)
-            setattr(self, 'blk_%d' % i, get_blk(i))
-            setattr(self, 'cls_%d' % i, cls_predictor(num_anchors,
-                                                      num_classes))
-            setattr(self, 'bbox_%d' % i, bbox_predictor(num_anchors))
+            setattr(self, f'blk_{i}', get_blk(i))
+            setattr(self, f'cls_{i}', cls_predictor(num_anchors, num_classes))
+            setattr(self, f'bbox_{i}', bbox_predictor(num_anchors))
 
     def forward(self, X):
         anchors, cls_preds, bbox_preds = [None] * 5, [None] * 5, [None] * 5
         for i in range(5):
             # getattr(self, 'blk_%d' % i) accesses self.blk_i
             X, anchors[i], cls_preds[i], bbox_preds[i] = blk_forward(
-                X, getattr(self, 'blk_%d' % i), sizes[i], ratios[i],
-                getattr(self, 'cls_%d' % i), getattr(self, 'bbox_%d' % i))
+                X, getattr(self, f'blk_{i}'), sizes[i], ratios[i],
+                getattr(self, f'cls_{i}'), getattr(self, f'bbox_{i}'))
         # In the reshape function, 0 indicates that the batch size remains
         # unchanged
         anchors = np.concatenate(anchors, axis=1)
@@ -245,18 +244,18 @@ Now, we will explain, step by step, how to train the SSD model for object detect
 
 ### Data Reading and Initialization
 
-We read the Pikachu dataset we created in the previous section.
+We read the banana detection dataset we created in the previous section.
 
 ```{.python .input  n=14}
 batch_size = 32
-train_iter, _ = d2l.load_data_pikachu(batch_size)
+train_iter, _ = d2l.load_data_bananas(batch_size)
 ```
 
-There is 1 category in the Pikachu dataset. After defining the module, we need to initialize the model parameters and define the optimization algorithm.
+There is 1 category in the banana detection dataset. After defining the module, we need to initialize the model parameters and define the optimization algorithm.
 
 ```{.python .input  n=15}
-ctx, net = d2l.try_gpu(), TinySSD(num_classes=1)
-net.initialize(init=init.Xavier(), ctx=ctx)
+device, net = d2l.try_gpu(), TinySSD(num_classes=1)
+net.initialize(init=init.Xavier(), ctx=device)
 trainer = gluon.Trainer(net.collect_params(), 'sgd',
                         {'learning_rate': 0.2, 'wd': 5e-4})
 ```
@@ -281,7 +280,8 @@ We can use the accuracy rate to evaluate the classification results. As we use t
 def cls_eval(cls_preds, cls_labels):
     # Because the category prediction results are placed in the final
     # dimension, argmax must specify this dimension
-    return float((cls_preds.argmax(axis=-1) == cls_labels).sum())
+    return float((cls_preds.argmax(axis=-1).astype(
+        cls_labels.dtype) == cls_labels).sum())
 
 def bbox_eval(bbox_preds, bbox_labels, bbox_masks):
     return float((np.abs((bbox_labels - bbox_preds) * bbox_masks)).sum())
@@ -301,8 +301,8 @@ for epoch in range(num_epochs):
     train_iter.reset()  # Read data from the start.
     for batch in train_iter:
         timer.start()
-        X = batch.data[0].as_in_context(ctx)
-        Y = batch.label[0].as_in_context(ctx)
+        X = batch.data[0].as_in_ctx(device)
+        Y = batch.label[0].as_in_ctx(device)
         with autograd.record():
             # Generate multiscale anchor boxes and predict the category and
             # offset of each
@@ -321,8 +321,9 @@ for epoch in range(num_epochs):
                    bbox_labels.size)
     cls_err, bbox_mae = 1-metric[0]/metric[1], metric[2]/metric[3]
     animator.add(epoch+1, (cls_err, bbox_mae))
-print('class err %.2e, bbox mae %.2e' % (cls_err, bbox_mae))
-print('%.1f examples/sec on %s' % (train_iter.num_image/timer.stop(), ctx))
+print(f'class err {cls_err:.2e}, bbox mae {bbox_mae:.2e}')
+print(f'{train_iter.num_image/timer.stop():.1f} examples/sec on '
+      f'{str(device)}')
 ```
 
 ## Prediction
@@ -330,7 +331,7 @@ print('%.1f examples/sec on %s' % (train_iter.num_image/timer.stop(), ctx))
 In the prediction stage, we want to detect all objects of interest in the image. Below, we read the test image and transform its size. Then, we convert it to the four-dimensional format required by the convolutional layer.
 
 ```{.python .input  n=20}
-img = image.imread('../img/pikachu.jpg')
+img = image.imread('../img/banana.jpg')
 feature = image.imresize(img, 256, 256).astype('float32')
 X = np.expand_dims(feature.transpose(2, 0, 1), axis=0)
 ```
@@ -339,7 +340,7 @@ Using the `MultiBoxDetection` function, we predict the bounding boxes based on t
 
 ```{.python .input  n=21}
 def predict(X):
-    anchors, cls_preds, bbox_preds = net(X.as_in_context(ctx))
+    anchors, cls_preds, bbox_preds = net(X.as_in_ctx(device))
     cls_probs = npx.softmax(cls_preds).transpose(0, 2, 1)
     output = npx.multibox_detection(cls_probs, bbox_preds, anchors)
     idx = [i for i, row in enumerate(output[0]) if row[0] != -1]
@@ -359,10 +360,10 @@ def display(img, output, threshold):
         if score < threshold:
             continue
         h, w = img.shape[0:2]
-        bbox = [row[2:6] * np.array((w, h, w, h), ctx=row.context)]
+        bbox = [row[2:6] * np.array((w, h, w, h), ctx=row.ctx)]
         d2l.show_bboxes(fig.axes, bbox, '%.2f' % score, 'w')
 
-display(img, output, threshold=0.3)
+display(img, output, threshold=0.9)
 ```
 
 ## Summary
@@ -374,12 +375,12 @@ display(img, output, threshold=0.3)
 
 ## Exercises
 
-1. Due to space limitations, we have ignored some of the implementation details of SSD models in this experiment. Can you further improve the model in the following areas?
+1. Due to space limitations, we have ignored some of the implementation details of the SSD model in this experiment. Can you further improve the model in the following areas?
 
 
 ### Loss Function
 
-For the predicted offsets, replace $L_1$ norm loss with $L_1$ regularization loss. This loss function uses a square function around zero for greater smoothness. This is the regularized area controlled by the hyperparameter $\sigma$:
+A. For the predicted offsets, replace $L_1$ norm loss with $L_1$ regularization loss. This loss function uses a square function around zero for greater smoothness. This is the regularized area controlled by the hyperparameter $\sigma$:
 
 $$
 f(x) =
@@ -406,7 +407,7 @@ d2l.plt.legend();
 In the experiment, we used cross-entropy loss for category prediction. Now,
 assume that the prediction probability of the actual category $j$ is $p_j$ and
 the cross-entropy loss is $-\log p_j$. We can also use the focal loss
-:cite:`Lin.Goyal.Girshick.ea.2017`. Given the positive hyper-parameters $\gamma$
+:cite:`Lin.Goyal.Girshick.ea.2017`. Given the positive hyperparameters $\gamma$
 and $\alpha$, this loss is defined as:
 
 $$ - \alpha (1-p_j)^{\gamma} \log p_j.$$
@@ -426,12 +427,14 @@ d2l.plt.legend();
 
 ### Training and Prediction
 
-2. When an object is relatively large compared to the image, the model normally adopts a larger input image size.
-3. This generally produces a large number of negative anchor boxes when labeling anchor box categories. We can sample the negative anchor boxes to better balance the data categories. To do this, we can set the `MultiBoxTarget` function's `negative_mining_ratio` parameter.
-4. Assign hyper-parameters with different weights to the anchor box category loss and positive anchor box offset loss in the loss function.
-5. Refer to the SSD paper. What methods can be used to evaluate the precision of
-  object detection models :cite:`Liu.Anguelov.Erhan.ea.2016`?
+B. When an object is relatively large compared to the image, the model normally adopts a larger input image size.
 
-## [Discussions](https://discuss.mxnet.io/t/2453)
+C. This generally produces a large number of negative anchor boxes when labeling anchor box categories. We can sample the negative anchor boxes to better balance the data categories. To do this, we can set the `MultiBoxTarget` function's `negative_mining_ratio` parameter.
 
-![](../img/qr_ssd.svg)
+D. Assign hyperparameters with different weights to the anchor box category loss and positive anchor box offset loss in the loss function.
+
+E. Refer to the SSD paper. What methods can be used to evaluate the precision of object detection models :cite:`Liu.Anguelov.Erhan.ea.2016`?
+
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/373)
+:end_tab:

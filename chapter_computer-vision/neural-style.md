@@ -1,6 +1,6 @@
 # Neural Style Transfer
 
-If you use social sharing apps or happen to be an amateur photographer, you are familiar with filters. Filters can alter the color styles of photos to make the background sharper or people's faces whiter. However, a filter generally can only change one aspect of a photo. To create the ideal photo, you often need to try many different filter combinations. This process is as complex as tuning the hyper-parameters of a model.
+If you use social sharing apps or happen to be an amateur photographer, you are familiar with filters. Filters can alter the color styles of photos to make the background sharper or people's faces whiter. However, a filter generally can only change one aspect of a photo. To create the ideal photo, you often need to try many different filter combinations. This process is as complex as tuning the hyperparameters of a model.
 
 In this section, we will discuss how we can use convolution neural networks
 (CNNs) to automatically apply the style of one image to another image, an
@@ -26,13 +26,13 @@ First, we read the content and style images. By printing out the image coordinat
 
 ```{.python .input  n=1}
 %matplotlib inline
-import d2l
+from d2l import mxnet as d2l
 from mxnet import autograd, gluon, image, init, np, npx
 from mxnet.gluon import nn
 
 npx.set_np()
 
-d2l.set_figsize((3.5, 2.5))
+d2l.set_figsize()
 content_img = image.imread('../img/rainier.jpg')
 d2l.plt.imshow(content_img.asnumpy());
 ```
@@ -56,7 +56,7 @@ def preprocess(img, image_shape):
     return np.expand_dims(img.transpose(2, 0, 1), axis=0)
 
 def postprocess(img):
-    img = img[0].as_in_context(rgb_std.context)
+    img = img[0].as_in_ctx(rgb_std.ctx)
     return (img.transpose(1, 2, 0) * rgb_std + rgb_mean).clip(0, 1)
 ```
 
@@ -100,13 +100,13 @@ def extract_features(X, content_layers, style_layers):
 Next, we define two functions: The `get_contents` function obtains the content features extracted from the content image, while the `get_styles` function obtains the style features extracted from the style image. Because we do not need to change the parameters of the pre-trained VGG model during training, we can extract the content features from the content image and style features from the style image before the start of training. As the composite image is the model parameter that must be updated during style transfer, we can only call the `extract_features` function during training to extract the content and style features of the composite image.
 
 ```{.python .input  n=8}
-def get_contents(image_shape, ctx):
-    content_X = preprocess(content_img, image_shape).copyto(ctx)
+def get_contents(image_shape, device):
+    content_X = preprocess(content_img, image_shape).copyto(device)
     contents_Y, _ = extract_features(content_X, content_layers, style_layers)
     return content_X, contents_Y
 
-def get_styles(image_shape, ctx):
-    style_X = preprocess(style_img, image_shape).copyto(ctx)
+def get_styles(image_shape, device):
+    style_X = preprocess(style_img, image_shape).copyto(device)
     _, styles_Y = extract_features(style_X, content_layers, style_layers)
     return style_X, styles_Y
 ```
@@ -158,7 +158,7 @@ def tv_loss(Y_hat):
 
 ### The Loss Function
 
-The loss function for style transfer is the weighted sum of the content loss, style loss, and total variance loss. By adjusting these weight hyper-parameters, we can balance the retained content, transferred style, and noise reduction in the composite image according to their relative importance.
+The loss function for style transfer is the weighted sum of the content loss, style loss, and total variance loss. By adjusting these weight hyperparameters, we can balance the retained content, transferred style, and noise reduction in the composite image according to their relative importance.
 
 ```{.python .input  n=14}
 content_weight, style_weight, tv_weight = 1, 1e3, 10
@@ -192,9 +192,9 @@ class GeneratedImage(nn.Block):
 Next, we define the `get_inits` function. This function creates a composite image model instance and initializes it to the image `X`. The Gram matrix for the various style layers of the style image, `styles_Y_gram`, is computed prior to training.
 
 ```{.python .input  n=16}
-def get_inits(X, ctx, lr, styles_Y):
+def get_inits(X, device, lr, styles_Y):
     gen_img = GeneratedImage(X.shape)
-    gen_img.initialize(init.Constant(X), ctx=ctx, force_reinit=True)
+    gen_img.initialize(init.Constant(X), ctx=device, force_reinit=True)
     trainer = gluon.Trainer(gen_img.collect_params(), 'adam',
                             {'learning_rate': lr})
     styles_Y_gram = [gram(Y) for Y in styles_Y]
@@ -206,13 +206,13 @@ def get_inits(X, ctx, lr, styles_Y):
 During model training, we constantly extract the content and style features of
 the composite image and calculate the loss function. Recall our discussion of
 how synchronization functions force the front end to wait for computation
-results in :numref:`sec_async`. Because we only call the `asscalar` synchronization function every 50
+results in :numref:`sec_async`. Because we only call the `asnumpy` synchronization function every 10
 epochs, the process may occupy a great deal of memory. Therefore, we call the
 `waitall` synchronization function during every epoch.
 
 ```{.python .input  n=17}
-def train(X, contents_Y, styles_Y, ctx, lr, num_epochs, lr_decay_epoch):
-    X, styles_Y_gram, trainer = get_inits(X, ctx, lr, styles_Y)
+def train(X, contents_Y, styles_Y, device, lr, num_epochs, lr_decay_epoch):
+    X, styles_Y_gram, trainer = get_inits(X, device, lr, styles_Y)
     animator = d2l.Animator(xlabel='epoch', ylabel='loss',
                             xlim=[1, num_epochs],
                             legend=['content', 'style', 'TV'],
@@ -239,11 +239,11 @@ def train(X, contents_Y, styles_Y, ctx, lr, num_epochs, lr_decay_epoch):
 Next, we start to train the model. First, we set the height and width of the content and style images to 150 by 225 pixels. We use the content image to initialize the composite image.
 
 ```{.python .input  n=18}
-ctx, image_shape = d2l.try_gpu(), (225, 150)
-net.collect_params().reset_ctx(ctx)
-content_X, contents_Y = get_contents(image_shape, ctx)
-_, styles_Y = get_styles(image_shape, ctx)
-output = train(content_X, contents_Y, styles_Y, ctx, 0.01, 500, 200)
+device, image_shape = d2l.try_gpu(), (225, 150)
+net.collect_params().reset_ctx(device)
+content_X, contents_Y = get_contents(image_shape, device)
+_, styles_Y = get_styles(image_shape, device)
+output = train(content_X, contents_Y, styles_Y, device, 0.01, 500, 200)
 ```
 
 As you can see, the composite image retains the scenery and objects of the content image, while introducing the color of the style image. Because the image is relatively small, the details are a bit fuzzy.
@@ -252,16 +252,16 @@ To obtain a clearer composite image, we train the model using a larger image siz
 
 ```{.python .input  n=19}
 image_shape = (900, 600)
-_, content_Y = get_contents(image_shape, ctx)
-_, style_Y = get_styles(image_shape, ctx)
+_, content_Y = get_contents(image_shape, device)
+_, style_Y = get_styles(image_shape, device)
 X = preprocess(postprocess(output) * 255, image_shape)
-output = train(X, content_Y, style_Y, ctx, 0.01, 300, 100)
-d2l.plt.imsave('../img/neural-style.png', postprocess(output).asnumpy())
+output = train(X, content_Y, style_Y, device, 0.01, 300, 100)
+d2l.plt.imsave('../img/neural-style.jpg', postprocess(output).asnumpy())
 ```
 
 As you can see, each epoch takes more time due to the larger image size. As shown in :numref:`fig_style_transfer_large`, the composite image produced retains more detail due to its larger size. The composite image not only has large blocks of color like the style image, but these blocks even have the subtle texture of brush strokes.
 
-![$900 \times 600$ composite image. ](../img/neural-style.png)
+![$900 \times 600$ composite image. ](../img/neural-style.jpg)
 :width:`500px`
 :label:`fig_style_transfer_large`
 
@@ -275,9 +275,9 @@ As you can see, each epoch takes more time due to the larger image size. As show
 ## Exercises
 
 1. How does the output change when you select different content and style layers?
-1. Adjust the weight hyper-parameters in the loss function. Does the output retain more content or have less noise?
+1. Adjust the weight hyperparameters in the loss function. Does the output retain more content or have less noise?
 1. Use different content and style images. Can you create more interesting composite images?
 
-## [Discussions](https://discuss.mxnet.io/t/2449)
-
-![](../img/qr_neural-style.svg)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/378)
+:end_tab:

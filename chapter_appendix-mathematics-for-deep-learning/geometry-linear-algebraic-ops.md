@@ -4,7 +4,7 @@
 In :numref:`sec_linear-algebra`, we encountered the basics of linear algebra
 and saw how it could be used to express common operations for transforming our data.
 Linear algebra is one of the key mathematical pillars
-underlying much of the work that we do deep learning 
+underlying much of the work that we do in deep learning 
 and in machine learning more broadly.
 While :numref:`sec_linear-algebra` contained enough machinery
 to communicate the mechanics of modern deep learning models, 
@@ -19,6 +19,7 @@ as either points or directions in space.
 Fundamentally, a vector is a list of numbers such as the Python list below.
 
 ```{.python .input}
+#@tab all
 v = [1, 7, 0, 1]
 ```
 
@@ -35,10 +36,15 @@ $$
 $$ 
 
 These often have different interpretations,
-where data points are column vectors
+where data examples are column vectors
 and weights used to form weighted sums are row vectors.
 However, it can be beneficial to be flexible.
-Matrices are useful data structures: they allow us to organize data that have different modalities of variation. For example, rows in our matrix might correspond to different houses (data points), while columns might correspond to different attributes. This should sound familiar if you have ever used spreadsheet software or have read :numref:`sec_pandas`. Thus, although the default orientation of a single vector is a column vector, in a matrix that represents a tabular dataset, it is more conventional to treat each data point as a row vector in the matrix. And, as we will see in later chapters, this convention will enable common deep learning practices. For example, along the outermost axis of an `ndarray`, we can access or enumerate minibatches of data points, or just data points if no minibatch exists.
+As we have described in :numref:`sec_linear-algebra`,
+though a single vector's default orientation is a column vector,
+for any matrix representing a tabular dataset, 
+treating each data example as a row vector
+in the matrix
+is more conventional.
 
 Given a vector, the first interpretation 
 that we should give it is as a point in space. 
@@ -59,13 +65,13 @@ as discovering how to separate two distinct clusters of points.
 
 In parallel, there is a second point of view 
 that people often take of vectors: as directions in space. 
-Not only can we think of the vector $\mathbf{v} = [2,3]^\top$ 
-as the location $2$ units to the right and $3$ units up from the origin,
+Not only can we think of the vector $\mathbf{v} = [3,2]^\top$ 
+as the location $3$ units to the right and $2$ units up from the origin,
 we can also think of it as the direction itself 
-to take $2$ steps to the right and $3$ steps up. 
+to take $3$ steps to the right and $2$ steps up. 
 In this way, we consider all the vectors in figure :numref:`fig_arrow` the same.
 
-![Any vector can be visualized as an arrow in the plane.  In this case, every vector drawn is a representation of the vector $(2,3)$.](../img/ParVec.svg)
+![Any vector can be visualized as an arrow in the plane.  In this case, every vector drawn is a representation of the vector $(3,2)^\top$.](../img/ParVec.svg)
 :label:`fig_arrow`
 
 One of the benefits of this shift is that
@@ -79,12 +85,12 @@ and then follow the directions given by the other, as is seen in :numref:`fig_ad
 Vector subtraction has a similar interpretation.
 By considering the identity that $\mathbf{u} = \mathbf{v} + (\mathbf{u}-\mathbf{v})$,
 we see that the vector $\mathbf{u}-\mathbf{v}$ is the direction 
-that takes us from the point $\mathbf{u}$ to the point $\mathbf{v}$.
+that takes us from the point $\mathbf{v}$ to the point $\mathbf{u}$.
 
 
 ## Dot Products and Angles
 As we saw in :numref:`sec_linear-algebra`, 
-if we take two column vectors say $\mathbf{u}$ and $\mathbf{v}$,
+if we take two column vectors $\mathbf{u}$ and $\mathbf{v}$,
 we can form their dot product by computing:
 
 $$\mathbf{u}^\top\mathbf{v} = \sum_i u_i\cdot v_i.$$
@@ -104,7 +110,7 @@ The dot product :eqref:`eq_dot_def` also admits a geometric interpretation: it i
 ![Between any two vectors in the plane there is a well defined angle $\theta$.  We will see this angle is intimately tied to the dot product.](../img/VecAngle.svg)
 :label:`fig_angle`
 
-To start, let's consider two specific vectors:
+To start, let us consider two specific vectors:
 
 $$
 \mathbf{v} = (r,0) \; \text{and} \; \mathbf{w} = (s\cos(\theta), s \sin(\theta)).
@@ -138,11 +144,11 @@ $$\theta = \arccos\left(\frac{\mathbf{v}\cdot\mathbf{w}}{\|\mathbf{v}\|\|\mathbf
 This is a nice result since nothing in the computation references two-dimensions.
 Indeed, we can use this in three or three million dimensions without issue.
 
-As a simple example, let's see how to compute the angle between a pair of vectors:
+As a simple example, let us see how to compute the angle between a pair of vectors:
 
 ```{.python .input}
 %matplotlib inline
-import d2l
+from d2l import mxnet as d2l
 from IPython import display
 from mxnet import gluon, np, npx
 npx.set_np()
@@ -151,6 +157,34 @@ def angle(v, w):
     return np.arccos(v.dot(w) / (np.linalg.norm(v) * np.linalg.norm(w)))
 
 angle(np.array([0, 1, 2]), np.array([2, 3, 4]))
+```
+
+```{.python .input}
+#@tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+from IPython import display
+import torch
+from torchvision import transforms
+import torchvision
+
+def angle(v, w):
+    return torch.acos(v.dot(w) / (torch.norm(v) * torch.norm(w)))
+
+angle(torch.tensor([0, 1, 2], dtype=torch.float32), torch.tensor([2.0, 3, 4]))
+```
+
+```{.python .input}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+from IPython import display
+import tensorflow as tf
+
+def angle(v, w):
+    return tf.acos(tf.tensordot(v, w, axes=1) / (tf.norm(v) * tf.norm(w)))
+
+angle(tf.constant([0, 1, 2], dtype=tf.float32), tf.constant([2.0, 3, 4]))
 ```
 
 We will not use it right now, but it is useful to know 
@@ -211,7 +245,7 @@ of a line (two dimensions) or of a plane (three dimensions).
 In an $d$-dimensional vector space, a hyperplane has $d-1$ dimensions
 and divides the space into two half-spaces. 
 
-Let's start with an example.
+Let us start with an example.
 Suppose that we have a column vector $\mathbf{w}=[2,1]^\top$. We want to know, "what are the points $\mathbf{v}$ with $\mathbf{w}\cdot\mathbf{v} = 1$?"
 By recalling the connection between dot products and angles above :eqref:`eq_angle_forumla`, 
 we can see that this is equivalent to 
@@ -288,20 +322,82 @@ ave_0 = np.mean(X_train_0, axis=0)
 ave_1 = np.mean(X_train_1, axis=0)
 ```
 
-It can be informative to examine these averages in detail, so let's plot what they look like.  In this case, we see that the average indeed resembles a blurry image of a t-shirt.
+```{.python .input}
+#@tab pytorch
+# Load in the dataset
+trans = []
+trans.append(transforms.ToTensor())
+trans = transforms.Compose(trans)
+train = torchvision.datasets.FashionMNIST(root="../data", transform=trans,
+                                          train=True, download=True)
+test = torchvision.datasets.FashionMNIST(root="../data", transform=trans,
+                                         train=False, download=True)
+
+X_train_0 = torch.stack(
+    [x[0] * 256 for x in train if x[1] == 0]).type(torch.float32)
+X_train_1 = torch.stack(
+    [x[0] * 256 for x in train if x[1] == 1]).type(torch.float32)
+X_test = torch.stack(
+    [x[0] * 256 for x in test if x[1] == 0 or x[1] == 1]).type(torch.float32)
+y_test = torch.stack([torch.tensor(x[1]) for x in test
+                      if x[1] == 0 or x[1] == 1]).type(torch.float32)
+
+# Compute averages
+ave_0 = torch.mean(X_train_0, axis=0)
+ave_1 = torch.mean(X_train_1, axis=0)
+```
 
 ```{.python .input}
+#@tab tensorflow
+# Load in the dataset
+(train_images, train_labels), (test_images, test_labels) = tf.keras.datasets.fashion_mnist.load_data()
+
+
+X_train_0 = tf.cast(tf.stack(train_images[[i for i, label in enumerate(
+    train_labels) if label == 0]] * 256), dtype=tf.float32)
+X_train_1 = tf.cast(tf.stack(train_images[[i for i, label in enumerate(
+    train_labels) if label == 1]] * 256), dtype=tf.float32)
+X_test = tf.cast(tf.stack(test_images[[i for i, label in enumerate(
+    test_labels) if label == 0]] * 256), dtype=tf.float32)
+y_test = tf.cast(tf.stack(test_images[[i for i, label in enumerate(
+    test_labels) if label == 1]] * 256), dtype=tf.float32)
+
+# Compute averages
+ave_0 = tf.reduce_mean(X_train_0, axis=0)
+ave_1 = tf.reduce_mean(X_train_1, axis=0)
+```
+
+It can be informative to examine these averages in detail, so let us plot what they look like.  In this case, we see that the average indeed resembles a blurry image of a t-shirt.
+
+```{.python .input}
+#@tab mxnet, pytorch
 # Plot average t-shirt
 d2l.set_figsize()
 d2l.plt.imshow(ave_0.reshape(28, 28).tolist(), cmap='Greys')
 d2l.plt.show()
 ```
 
+```{.python .input}
+#@tab tensorflow
+# Plot average t-shirt
+d2l.set_figsize()
+d2l.plt.imshow(tf.reshape(ave_0, (28, 28)), cmap='Greys')
+d2l.plt.show()
+```
+
 In the second case, we again see that the average resembles a blurry image of trousers.
 
 ```{.python .input}
+#@tab mxnet, pytorch
 # Plot average trousers
 d2l.plt.imshow(ave_1.reshape(28, 28).tolist(), cmap='Greys')
+d2l.plt.show()
+```
+
+```{.python .input}
+#@tab tensorflow
+# Plot average trousers
+d2l.plt.imshow(tf.reshape(ave_1, (28, 28)), cmap='Greys')
 d2l.plt.show()
 ```
 
@@ -314,6 +410,27 @@ predictions = X_test.reshape(2000, -1).dot(w.flatten()) > -1500000
 
 # Accuracy
 np.mean(predictions.astype(y_test.dtype) == y_test, dtype=np.float64)
+```
+
+```{.python .input}
+#@tab pytorch
+# Print test set accuracy with eyeballed threshold
+w = (ave_1 - ave_0).T
+# '@' is Matrix Multiplication operator in pytorch.
+predictions = X_test.reshape(2000, -1) @ (w.flatten()) > -1500000
+
+# Accuracy
+torch.mean(predictions.type(y_test.dtype) == y_test, dtype=torch.float64)
+```
+
+```{.python .input}
+#@tab tensorflow
+# Print test set accuracy with eyeballed threshold
+w = tf.transpose(ave_1 - ave_0)
+predictions = tf.reduce_sum(X_test * tf.nest.flatten(w), axis=0) > -1500000
+
+# Accuracy
+tf.reduce_mean(tf.cast(tf.cast(predictions, y_test.dtype) == y_test, tf.float32))
 ```
 
 ## Geometry of Linear Transformations
@@ -361,7 +478,7 @@ These vectors are an example a *basis*,
 where we can write any vector in our space 
 as a weighted sum of these *basis vectors*.
 
-Let's draw what happens when we use the specific matrix
+Let us draw what happens when we use the specific matrix
 
 $$
 \mathbf{A} = \begin{bmatrix}
@@ -426,7 +543,7 @@ This compresses the entire plane down to live on the single line $y = 2x$.
 The question now arises: is there some way we can detect this
 just looking at the matrix itself?
 The answer is that indeed we can.
-Let's take $\mathbf{b}_1 = [2,4]^\top$ and $\mathbf{b}_2 = [-1, -2]^\top$ 
+Let us take $\mathbf{b}_1 = [2,4]^\top$ and $\mathbf{b}_2 = [-1, -2]^\top$ 
 be the two columns of $\mathbf{B}$.
 Remember that we can write everything transformed by the matrix $\mathbf{B}$
 as a weighted sum of the columns of the matrix: 
@@ -454,7 +571,7 @@ $$
 $$
 
 In general, we will say that a collection of vectors
-$\mathbf{v}_1, \ldots \mathbf{v}_k$ are *linearly dependent* 
+$\mathbf{v}_1, \ldots, \mathbf{v}_k$ are *linearly dependent* 
 if there exist coefficients $a_1, \ldots, a_k$ *not all equal to zero* so that
 
 $$
@@ -573,6 +690,20 @@ M_inv = np.array([[2, -1], [-0.5, 0.5]])
 M_inv.dot(M)
 ```
 
+```{.python .input}
+#@tab pytorch
+M = torch.tensor([[1, 2], [1, 4]], dtype=torch.float32)
+M_inv = torch.tensor([[2, -1], [-0.5, 0.5]])
+M_inv @ M
+```
+
+```{.python .input}
+#@tab tensorflow
+M = tf.constant([[1, 2], [1, 4]], dtype=tf.float32)
+M_inv = tf.constant([[2, -1], [-0.5, 0.5]])
+tf.matmul(M_inv, M)
+```
+
 ### Numerical Issues
 While the inverse of a matrix is useful in theory, 
 we must say that most of the time we do not wish 
@@ -610,7 +741,7 @@ and generally avoiding inversion in practice is a good rule of thumb.
 
 ## Determinant
 The geometric view of linear algebra gives an intuitive way 
-to interpret a a fundamental quantity known as the *determinant*.
+to interpret a fundamental quantity known as the *determinant*.
 Consider the grid image from before, but now with a highlighted region (:numref:`fig_grid-filled`).
 
 ![The matrix $\mathbf{A}$ again distorting the grid.  This time, I want to draw particular attention to what happens to the highlighted square.](../img/GridTransformFilled.svg)
@@ -646,11 +777,21 @@ we can see with some computation that the area
 of the resulting parallelogram is $ad-bc$.
 This area is referred to as the *determinant*.
 
-Let's check this quickly with some example code.
+Let us check this quickly with some example code.
 
 ```{.python .input}
 import numpy as np
 np.linalg.det(np.array([[1, -1], [2, 3]]))
+```
+
+```{.python .input}
+#@tab pytorch
+torch.det(torch.tensor([[1, -1], [2, 3]], dtype=torch.float32))
+```
+
+```{.python .input}
+#@tab tensorflow
+tf.linalg.det(tf.constant([[1, -1], [2, 3]], dtype=tf.float32))
 ```
 
 The eagle-eyed amongst us will notice 
@@ -659,9 +800,9 @@ For the negative term, this is a matter of convention
 taken generally in mathematics: 
 if the matrix flips the figure, 
 we say the area is negated.
-Let's see now that when the determinant is zero, we learn more.
+Let us see now that when the determinant is zero, we learn more.
 
-Let's consider
+Let us consider
 
 $$
 \mathbf{B} = \begin{bmatrix}
@@ -743,7 +884,7 @@ $$
 
 ### Common Examples from Linear Algebra
 
-Let's see how many of the linear algebraic definitions 
+Let us see how many of the linear algebraic definitions 
 we have seen before can be expressed in this compressed tensor notation:
 
 * $\mathbf{v} \cdot \mathbf{w} = \sum_i v_iw_i$
@@ -769,7 +910,29 @@ v = np.array([1, 2])
 A.shape, B.shape, v.shape
 ```
 
-Einstein summation has been implemented directly  via ```np.einsum```. 
+```{.python .input}
+#@tab pytorch
+# Define tensors
+B = torch.tensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
+A = torch.tensor([[1, 2], [3, 4]])
+v = torch.tensor([1, 2])
+
+# Print out the shapes
+A.shape, B.shape, v.shape
+```
+
+```{.python .input}
+#@tab tensorflow
+# Define tensors
+B = tf.constant([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
+A = tf.constant([[1, 2], [3, 4]])
+v = tf.constant([1, 2])
+
+# Print out the shapes
+A.shape, B.shape, v.shape
+```
+
+Einstein summation has been implemented directly. 
 The indices that occurs in the Einstein summation can be passed as a string, 
 followed by the tensors that are being acted upon.
 For instance, to implement matrix multiplication,
@@ -782,18 +945,40 @@ and strip out the indices themselves to get the implementation:
 np.einsum("ij, j -> i", A, v), A.dot(v)
 ```
 
+```{.python .input}
+#@tab pytorch
+# Reimplement matrix multiplication
+torch.einsum("ij, j -> i", A, v), A@v
+```
+
+```{.python .input}
+#@tab tensorflow
+# Reimplement matrix multiplication
+tf.einsum("ij, j -> i", A, v), tf.matmul(A, tf.reshape(v, (2, 1)))
+```
+
 This is a highly flexible notation.
 For instance if we want to compute 
 what would be traditionally written as
 
 $$
-c_{kl} = \sum_{ij} \mathbf{B}_{ijk}\mathbf{A}_{il}v_j.
+c_{kl} = \sum_{ij} \mathbf{b}_{ijk}\mathbf{a}_{il}v_j.
 $$
 
 it can be implemented via Einstein summation as:
 
 ```{.python .input}
 np.einsum("ijk, il, j -> kl", B, A, v)
+```
+
+```{.python .input}
+#@tab pytorch
+torch.einsum("ijk, il, j -> kl", B, A, v)
+```
+
+```{.python .input}
+#@tab tensorflow
+tf.einsum("ijk, il, j -> kl", B, A, v)
 ```
 
 This notation is readable and efficient for humans,
@@ -805,6 +990,16 @@ For example, the same tensor contraction can also be written as:
 
 ```{.python .input}
 np.einsum(B, [0, 1, 2], A, [0, 3], v, [1], [2, 3])
+```
+
+```{.python .input}
+#@tab pytorch
+# PyTorch doesn't support this type of notation.
+```
+
+```{.python .input}
+#@tab tensorflow
+# TensorFlow doesn't support this type of notation.
 ```
 
 Either notation allows for concise and efficient representation of tensor contractions in code.
@@ -845,6 +1040,15 @@ $$
 7. How can you write $\mathrm{tr}(\mathbf{A}^4)$ in Einstein notation for an arbitrary matrix $A$?
 
 
-## [Discussions](https://discuss.mxnet.io/t/5147)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/410)
+:end_tab:
 
-![](../img/qr_geometry-linear-algebraic-ops.svg)
+:begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1084)
+:end_tab:
+
+
+:begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1085)
+:end_tab:

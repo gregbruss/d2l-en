@@ -1,9 +1,9 @@
 # Natural Language Inference: Using Attention
 :label:`sec_natural-language-inference-attention`
 
-We introduced the natural language inference (NLI) task and the SNLI dataset in :numref:`sec_natural-language-inference-and-dataset`. In view of many models that are based on complex and deep architectures, Parikh et al. proposed to address NLI with attention mechanisms and called it a "decomposable attention model" :cite:`Parikh.Tackstrom.Das.ea.2016`.
+We introduced the natural language inference task and the SNLI dataset in :numref:`sec_natural-language-inference-and-dataset`. In view of many models that are based on complex and deep architectures, Parikh et al. proposed to address natural language inference with attention mechanisms and called it a "decomposable attention model" :cite:`Parikh.Tackstrom.Das.ea.2016`.
 This results in a model without recurrent or convolutional layers, achieving the best result at the time on the SNLI dataset with much fewer parameters.
-In this section, we will describe and implement this attention-based method (with MLPs) for NLI, as depicted in :numref:`fig_nlp-map-nli-attention`.
+In this section, we will describe and implement this attention-based method (with MLPs) for natural language inference, as depicted in :numref:`fig_nlp-map-nli-attention`.
 
 ![This section feeds pretrained GloVe to an architecture based on attention and MLPs for natural language inference.](../img/nlp-map-nli-attention.svg)
 :label:`fig_nlp-map-nli-attention`
@@ -19,18 +19,17 @@ Similar to alignment of words between source and target sentences in machine tra
 the alignment of words between premises and hypotheses
 can be neatly accomplished by attention mechanisms.
 
-![NLI using attention mechanisms. ](../img/nli_attention.svg)
+![Natural language inference using attention mechanisms. ](../img/nli_attention.svg)
 :label:`fig_nli_attention`
 
-:numref:`fig_nli_attention` depicts the NLI method using attention mechanisms.
+:numref:`fig_nli_attention` depicts the natural language inference method using attention mechanisms.
 At a high level, it consists of three jointly trained steps: attending, comparing, and aggregating.
 We will illustrate them step by step in the following.
 
 ```{.python .input  n=1}
-import d2l
+from d2l import mxnet as d2l
 import mxnet as mx
 from mxnet import autograd, gluon, init, np, npx
-from mxnet.contrib import text
 from mxnet.gluon import nn
 
 npx.set_np()
@@ -59,7 +58,7 @@ For soft alignment, we compute the attention weights $e_{ij} \in \mathbb{R}$ as
 $$e_{ij} = f(\mathbf{a}_i)^\top f(\mathbf{b}_j),$$
 :eqlabel:`eq_nli_e`
 
-where the function $f$ is a multilayer perceptron defined in the following `mlp` function.
+where the function $f$ is an MLP defined in the following `mlp` function.
 The output dimension of $f$ is specified by the `num_hiddens` argument of `mlp`.
 
 ```{.python .input  n=2}
@@ -101,19 +100,22 @@ class Attend(nn.Block):
         self.f = mlp(num_hiddens=num_hiddens, flatten=False)
 
     def forward(self, A, B):
-        # Shape of A/B: (batch_size, #words in sequence A/B, embed_size)
-        # Shape of f_A/f_B: (batch_size, #words in sequence A/B, num_hiddens)
+        # Shape of `A`/`B`: (b`atch_size`, no. of words in sequence A/B,
+        # `embed_size`)
+        # Shape of `f_A`/`f_B`: (`batch_size`, no. of words in sequence A/B,
+        # `num_hiddens`)
         f_A = self.f(A)
         f_B = self.f(B)
-        # Shape of e: (batch_size, #words in sequence A, #words in sequence B)
+        # Shape of `e`: (`batch_size`, no. of words in sequence A,
+        # no. of words in sequence B)
         e = npx.batch_dot(f_A, f_B, transpose_b=True)
-        # Shape of beta: (batch_size, #words in sequence A, embed_size), where
-        # sequence B is softly aligned with each word (axis 1 of beta) in
-        # sequence A
+        # Shape of `beta`: (`batch_size`, no. of words in sequence A,
+        # `embed_size`), where sequence B is softly aligned with each word
+        # (axis 1 of `beta`) in sequence A
         beta = npx.batch_dot(npx.softmax(e), B)
-        # Shape of alpha: (batch_size, #words in sequence B, embed_size),
-        # where sequence A is softly aligned with each word (axis 1 of alpha)
-        # in sequence B
+        # Shape of `alpha`: (`batch_size`, no. of words in sequence B,
+        # `embed_size`), where sequence A is softly aligned with each word
+        # (axis 1 of `alpha`) in sequence B
         alpha = npx.batch_dot(npx.softmax(e.transpose(0, 2, 1)), A)
         return beta, alpha
 ```
@@ -125,7 +127,7 @@ Note that in soft alignment, all the words from one sequence, though with probab
 For easy of demonstration, :numref:`fig_nli_attention` pairs words with aligned words in a *hard* way.
 For example, suppose that the attending step determines that "need" and "sleep" in the premise are both aligned with "tired" in the hypothesis, the pair "tired--need sleep" will be compared.
 
-In the comparing step, we feed the concatenation (operator $[\cdot, \cdot]$) of words from one sequence and aligned words from the other sequence into a function $g$ (a multilayer perceptron):
+In the comparing step, we feed the concatenation (operator $[\cdot, \cdot]$) of words from one sequence and aligned words from the other sequence into a function $g$ (an MLP):
 
 $$\mathbf{v}_{A,i} = g([\mathbf{a}_i, \boldsymbol{\beta}_i]), i = 1, \ldots, m\\ \mathbf{v}_{B,j} = g([\mathbf{b}_j, \boldsymbol{\alpha}_j]), j = 1, \ldots, n.$$
 
@@ -158,7 +160,7 @@ $$
 \mathbf{v}_A = \sum_{i=1}^{m} \mathbf{v}_{A,i}, \quad \mathbf{v}_B = \sum_{j=1}^{n}\mathbf{v}_{B,j}.
 $$
 
-Next we feed the concatenation of both summarization results into function $h$ (a multilayer perceptron) to obtain the classification result of the logical relationship:
+Next we feed the concatenation of both summarization results into function $h$ (an MLP) to obtain the classification result of the logical relationship:
 
 $$
 \hat{\mathbf{y}} = h([\mathbf{v}_A, \mathbf{v}_B]).
@@ -231,12 +233,11 @@ Then we create a model instance, initialize its parameters,
 and load the GloVe embedding to initialize vectors of input tokens.
 
 ```{.python .input  n=8}
-embed_size, num_hiddens, ctx = 100, 200, d2l.try_all_gpus()
+embed_size, num_hiddens, devices = 100, 200, d2l.try_all_gpus()
 net = DecomposableAttention(vocab, embed_size, num_hiddens)
-net.initialize(init.Xavier(), ctx=ctx)
-glove_embedding = text.embedding.create(
-    'glove', pretrained_file_name='glove.6B.100d.txt')
-embeds = glove_embedding.get_vecs_by_tokens(vocab.idx_to_token)
+net.initialize(init.Xavier(), ctx=devices)
+glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
+embeds = glove_embedding[vocab.idx_to_token]
 net.embedding.weight.set_data(embeds)
 ```
 
@@ -246,12 +247,12 @@ In contrast to the `split_batch` function in :numref:`sec_multi_gpu` that takes 
 we define a `split_batch_multi_inputs` function to take multiple inputs such as premises and hypotheses in minibatches.
 
 ```{.python .input  n=10}
-# Saved in the d2l package for later use
-def split_batch_multi_inputs(X, y, ctx_list):
-    """Split multi-input X and y into multiple devices specified by ctx"""
+#@save
+def split_batch_multi_inputs(X, y, devices):
+    """Split multi-input `X` and `y` into multiple devices."""
     X = list(zip(*[gluon.utils.split_and_load(
-        feature, ctx_list, even_split=False) for feature in X]))
-    return (X, gluon.utils.split_and_load(y, ctx_list, even_split=False))
+        feature, devices, even_split=False) for feature in X]))
+    return (X, gluon.utils.split_and_load(y, devices, even_split=False))
 ```
 
 Now we can train and evaluate the model on the SNLI dataset.
@@ -260,7 +261,7 @@ Now we can train and evaluate the model on the SNLI dataset.
 lr, num_epochs = 0.001, 4
 trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
-d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, ctx,
+d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices,
                split_batch_multi_inputs)
 ```
 
@@ -269,8 +270,8 @@ d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, ctx,
 Finally, define the prediction function to output the logical relationship between a pair of premise and hypothesis.
 
 ```{.python .input  n=14}
-# Saved in the d2l package for later use
-def predict_snli(net, premise, hypothesis):
+#@save
+def predict_snli(net, vocab, premise, hypothesis):
     premise = np.array(vocab[premise], ctx=d2l.try_gpu())
     hypothesis = np.array(vocab[hypothesis], ctx=d2l.try_gpu())
     label = np.argmax(net([premise.reshape((1, -1)),
@@ -279,10 +280,10 @@ def predict_snli(net, premise, hypothesis):
             else 'neutral'
 ```
 
-We can use the trained model to obtain the NLI result for a sample pair of sentences.
+We can use the trained model to obtain the natural language inference result for a sample pair of sentences.
 
 ```{.python .input  n=15}
-predict_snli(net, ['he', 'is', 'good', '.'], ['he', 'is', 'bad', '.'])
+predict_snli(net, vocab, ['he', 'is', 'good', '.'], ['he', 'is', 'bad', '.'])
 ```
 
 ## Summary
@@ -290,16 +291,16 @@ predict_snli(net, ['he', 'is', 'good', '.'], ['he', 'is', 'bad', '.'])
 * The decomposable attention model consists of three steps for predicting the logical relationships between premises and hypotheses: attending, comparing, and aggregating.
 * With attention mechanisms, we can align words in one text sequence to every word in the other, and vice versa. Such alignment is soft using weighted average, where ideally large weights are associated with the words to be aligned.
 * The decomposition trick leads to a more desirable linear complexity than quadratic complexity when computing attention weights.
-* We can use pretrained word embedding as the input representation for downstream NLP task such as NLI.
+* We can use pretrained word embedding as the input representation for downstream natural language processing task such as natural language inference.
 
 
 ## Exercises
 
 1. Train the model with other combinations of hyperparameters. Can you get better accuracy on the test set?
-1. What are major drawbacks of the decomposable attention model for NLI?
+1. What are major drawbacks of the decomposable attention model for natural language inference?
 1. Suppose that we want to get the level of semantical similarity (e.g., a continuous value between $0$ and $1$) for any pair of sentences. How shall we collect and label the dataset? Can you design a model with attention mechanisms?
 
 
-## [Discussions](https://discuss.mxnet.io/t/5518)
-
-![](../img/qr_natural-language-inference-attention.svg)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/395)
+:end_tab:

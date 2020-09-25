@@ -11,7 +11,7 @@ $$
 \hat{y}(x) = \mathbf{w}_0 + \sum_{i=1}^d \mathbf{w}_i x_i + \sum_{i=1}^d\sum_{j=i+1}^d \langle\mathbf{v}_i, \mathbf{v}_j\rangle x_i x_j
 $$
 
-where $\mathbf{w}_0 \in \mathbb{R}$ is the global bias; $\mathbf{w} \in \mathbb{R}^d$ denotes the weights of the i-th variable; $\mathbf{V} \in \mathbb{R}^{d\times k}$ represents the feature embeddings; $\mathbf{v}_i$ represents the $i^\mathrm{th}$ row of $\mathbf{V}$; $k$ is the dimensionality of latent factors; $\langle\cdot, \cdot \rangle$ is the dot product of two vectors.  $\langle \mathbf{v}_i, \mathbf{v}_j \rangle$ model the interaction between the $i^\mathrm{th}$ and $j^\mathrm{th}$ feature. Some feature interactions can be easily understood so they can be designed by experts. However, most other feature interactions are hidden in data and difficult to identify. So modeling feature interactions automatically can greatly reduce the efforts in feature engineering. It is obvious that the first two terms correspond to the linear regression model and the last term is an extension of the matrix factorization model. If the feature $i$ represents a item and the feature $j$ represents a user, the third term is exactly the dot product between user and item embeddings. It is worth noting that FM can also generalize to higher orders (degree > 2). Nevertheless, the numerical stability might weaken the generalization.  
+where $\mathbf{w}_0 \in \mathbb{R}$ is the global bias; $\mathbf{w} \in \mathbb{R}^d$ denotes the weights of the i-th variable; $\mathbf{V} \in \mathbb{R}^{d\times k}$ represents the feature embeddings; $\mathbf{v}_i$ represents the $i^\mathrm{th}$ row of $\mathbf{V}$; $k$ is the dimensionality of latent factors; $\langle\cdot, \cdot \rangle$ is the dot product of two vectors.  $\langle \mathbf{v}_i, \mathbf{v}_j \rangle$ model the interaction between the $i^\mathrm{th}$ and $j^\mathrm{th}$ feature. Some feature interactions can be easily understood so they can be designed by experts. However, most other feature interactions are hidden in data and difficult to identify. So modeling feature interactions automatically can greatly reduce the efforts in feature engineering. It is obvious that the first two terms correspond to the linear regression model and the last term is an extension of the matrix factorization model. If the feature $i$ represents an item and the feature $j$ represents a user, the third term is exactly the dot product between user and item embeddings. It is worth noting that FM can also generalize to higher orders (degree > 2). Nevertheless, the numerical stability might weaken the generalization.  
  
 
 ## An Efficient Optimization Criterion
@@ -22,7 +22,7 @@ $$
 \begin{aligned}
 &\sum_{i=1}^d \sum_{j=i+1}^d \langle\mathbf{v}_i, \mathbf{v}_j\rangle x_i x_j \\
  &= \frac{1}{2} \sum_{i=1}^d \sum_{j=1}^d\langle\mathbf{v}_i, \mathbf{v}_j\rangle x_i x_j - \frac{1}{2}\sum_{i=1}^d \langle\mathbf{v}_i, \mathbf{v}_i\rangle x_i x_i \\
- &= \frac{1}{2} \big (\sum_{i=1}^d \sum_{j=1}^d \sum_{l=1}^k\mathbf{v}_{i, l} \mathbf{v}_{j, l} x_i x_j - \sum_{i=1}^d \sum_{l=1}^k \mathbf{v}_{i, l} \mathbf{v}_{j, l} x_i x_i \big)\\
+ &= \frac{1}{2} \big (\sum_{i=1}^d \sum_{j=1}^d \sum_{l=1}^k\mathbf{v}_{i, l} \mathbf{v}_{j, l} x_i x_j - \sum_{i=1}^d \sum_{l=1}^k \mathbf{v}_{i, l} \mathbf{v}_{i, l} x_i x_i \big)\\
  &=  \frac{1}{2} \sum_{l=1}^k \big ((\sum_{i=1}^d \mathbf{v}_{i, l} x_i) (\sum_{j=1}^d \mathbf{v}_{j, l}x_j) - \sum_{i=1}^d \mathbf{v}_{i, l}^2 x_i^2 \big ) \\
  &= \frac{1}{2} \sum_{l=1}^k \big ((\sum_{i=1}^d \mathbf{v}_{i, l} x_i)^2 - \sum_{i=1}^d \mathbf{v}_{i, l}^2 x_i^2)
  \end{aligned}
@@ -33,9 +33,10 @@ With this reformulation, the model complexity are decreased greatly. Moreover, f
 To learn the FM model, we can use the MSE loss for regression task, the cross entropy loss for classification tasks, and the BPR loss for ranking task. Standard optimizers such as SGD and Adam are viable for optimization.
 
 ```{.python .input  n=2}
-import d2l
+from d2l import mxnet as d2l
 from mxnet import init, gluon, np, npx
 from mxnet.gluon import nn
+import os
 import sys
 npx.set_np()
 ```
@@ -67,31 +68,30 @@ We use the CTR data wrapper from the last section to load the online advertising
 ```{.python .input  n=3}
 batch_size = 2048
 data_dir = d2l.download_extract('ctr')
-train_data = d2l.CTRDataset(data_dir + "train.csv")
-test_data = d2l.CTRDataset(data_dir + "test.csv",
+train_data = d2l.CTRDataset(os.path.join(data_dir, 'train.csv'))
+test_data = d2l.CTRDataset(os.path.join(data_dir, 'test.csv'),
                            feat_mapper=train_data.feat_mapper,
                            defaults=train_data.defaults)
-num_workers = 0 if sys.platform.startswith("win") else 4
 train_iter = gluon.data.DataLoader(
-    train_data, shuffle=True, last_batch="rollover", batch_size=batch_size,
-    num_workers=num_workers)
+    train_data, shuffle=True, last_batch='rollover', batch_size=batch_size,
+    num_workers=d2l.get_dataloader_workers())
 test_iter = gluon.data.DataLoader(
-    test_data, shuffle=False, last_batch="rollover", batch_size=batch_size,
-    num_workers=num_workers)
+    test_data, shuffle=False, last_batch='rollover', batch_size=batch_size,
+    num_workers=d2l.get_dataloader_workers())
 ```
 
 ## Train the Model
 Afterwards, we train the model. The learning rate is set to 0.01 and the embedding size is set to 20 by default. The `Adam` optimizer and the `SigmoidBinaryCrossEntropyLoss` loss are used for model training.
 
 ```{.python .input  n=5}
-ctx = d2l.try_all_gpus()
+devices = d2l.try_all_gpus()
 net = FM(train_data.field_dims, num_factors=20)
-net.initialize(init.Xavier(), ctx=ctx)
+net.initialize(init.Xavier(), ctx=devices)
 lr, num_epochs, optimizer = 0.02, 30, 'adam'
 trainer = gluon.Trainer(net.collect_params(), optimizer,
                         {'learning_rate': lr})
 loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
-d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, ctx)
+d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
 ## Summary
@@ -99,10 +99,11 @@ d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, ctx)
 * FM is a general framework that can be applied on a variety of tasks such as regression, classification, and ranking. 
 * Feature interaction/crossing is important for prediction tasks and the 2-way interaction can be efficiently modeled with FM.
 
-## Exercise
+## Exercises
+
 * Can you test FM on other dataset such as Avazu, MovieLens, and Criteo datasets?
 * Vary the embedding size to check its impact on performance, can you observe a similar pattern as that of matrix factorization?
 
-## [Discussions](https://discuss.mxnet.io/t/5167)
-
-![](../img/qr_fm.svg)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/406)
+:end_tab:

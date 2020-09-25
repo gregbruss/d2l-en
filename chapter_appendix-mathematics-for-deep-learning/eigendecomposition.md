@@ -17,7 +17,7 @@ $$
 $$
 
 If we apply $A$ to any vector $\mathbf{v} = [x, y]^\top$, 
-we obtain a vector $\mathbf{v}A = [2x, -y]^\top$.
+we obtain a vector $\mathbf{A}\mathbf{v} = [2x, -y]^\top$.
 This has an intuitive interpretation:
 stretch the vector to be twice as wide in the $x$-direction,
 and then flip it in the $y$-direction.
@@ -41,8 +41,7 @@ $$
 We say that $\mathbf{v}$ is an eigenvector for $A$ and $\lambda$ is an eigenvalue.
 
 ## Finding Eigenvalues
-Let's figure out how to find them.  
-By subtracting off the $\lambda \vec v$ from both sides,
+Let us figure out how to find them. By subtracting off the $\lambda \mathbf{v}$ from both sides,
 and then factoring out the vector,
 we see the above is equivalent to:
 
@@ -59,7 +58,7 @@ $\mathbf{A}\mathbf{v} = \lambda \mathbf{v}$
 to find the associated *eigenvector(s)*.
 
 ### An Example
-Let's see this with a more challenging matrix
+Let us see this with a more challenging matrix
 
 $$
 \mathbf{A} = \begin{bmatrix}
@@ -80,8 +79,8 @@ $$
 2 & 3 
 \end{bmatrix}\begin{bmatrix}x \\ y\end{bmatrix} = \begin{bmatrix}x \\ y\end{bmatrix}  \; \text{and} \;
 \begin{bmatrix}
-2 & 2\\
-1 & 3 
+2 & 1\\
+2 & 3 
 \end{bmatrix}\begin{bmatrix}x \\ y\end{bmatrix}  = \begin{bmatrix}4x \\ 4y\end{bmatrix} .
 $$
 
@@ -91,11 +90,32 @@ We can check this in code using the built-in `numpy.linalg.eig` routine.
 
 ```{.python .input}
 %matplotlib inline
-import d2l
+from d2l import mxnet as d2l
 from IPython import display
 import numpy as np
 
 np.linalg.eig(np.array([[2, 1], [2, 3]]))
+```
+
+```{.python .input}
+#@tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+from IPython import display
+import torch
+
+torch.eig(torch.tensor([[2, 1], [2, 3]], dtype=torch.float64),
+          eigenvectors=True)
+```
+
+```{.python .input}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+from IPython import display
+import tensorflow as tf
+
+tf.linalg.eigh(tf.constant([[2, 1], [2, 3]], dtype=tf.float64))
 ```
 
 Note that `numpy` normalizes the eigenvectors to be of length one,
@@ -105,7 +125,7 @@ However, the vectors computed are parallel
 to the ones we found by hand with the same eigenvalues.
 
 ## Decomposing Matrices
-Let's continue the previous example one step further.  Let
+Let us continue the previous example one step further.  Let
 
 $$
 \mathbf{W} = \begin{bmatrix}
@@ -144,8 +164,7 @@ of linearly independent eigenvectors (so that $W$ is invertible).
 ## Operations on Eigendecompositions
 One nice thing about eigendecompositions :eqref:`eq_eig_decomp` is that 
 we can write many operations we usually encounter cleanly 
-in terms of the eigendecomposition.  
-As a first example, consider:
+in terms of the eigendecomposition. As a first example, consider:
 
 $$
 \mathbf{A}^n = \overbrace{\mathbf{A}\cdots \mathbf{A}}^{\text{$n$ times}} = \overbrace{(\mathbf{W}\boldsymbol{\Sigma} \mathbf{W}^{-1})\cdots(\mathbf{W}\boldsymbol{\Sigma} \mathbf{W}^{-1})}^{\text{$n$ times}} =  \mathbf{W}\overbrace{\boldsymbol{\Sigma}\cdots\boldsymbol{\Sigma}}^{\text{$n$ times}}\mathbf{W}^{-1} = \mathbf{W}\boldsymbol{\Sigma}^n \mathbf{W}^{-1}.
@@ -184,8 +203,8 @@ we can see that the rank is the same
 as the number of non-zero eigenvalues of $\mathbf{A}$.
 
 The examples could continue, but hopefully the point is clear:
-eigendecompositions can simplify many linear-algebraic computations
-and are a fundamental operation underlying many numerical algorithms
+eigendecomposition can simplify many linear-algebraic computations
+and is a fundamental operation underlying many numerical algorithms
 and much of the analysis that we do in linear algebra. 
 
 ## Eigendecompositions of Symmetric Matrices
@@ -199,7 +218,7 @@ $$
 \end{bmatrix},
 $$
 
-has only a single eigenvector, namely $(0, 1)$. 
+has only a single eigenvector, namely $(1, 0)^\top$. 
 To handle such matrices, we require more advanced techniques 
 than we can cover (such as the Jordan Normal Form, or Singular Value Decomposition).
 We will often need to restrict our attention to those matrices 
@@ -228,7 +247,7 @@ Let $\mathcal{D}_i$ represent the disc in the complex plane
 with center $a_{ii}$ radius $r_i$.
 Then, every eigenvalue of $\mathbf{A}$ is contained in one of the $\mathcal{D}_i$.
 
-This can be a bit to unpack, so let's look at an example.  
+This can be a bit to unpack, so let us look at an example.  
 Consider the matrix:
 
 $$
@@ -267,6 +286,28 @@ v, _ = np.linalg.eig(A)
 v
 ```
 
+```{.python .input}
+#@tab pytorch
+A = torch.tensor([[1.0, 0.1, 0.1, 0.1],
+              [0.1, 3.0, 0.2, 0.3],
+              [0.1, 0.2, 5.0, 0.5],
+              [0.1, 0.3, 0.5, 9.0]])
+
+v, _ = torch.eig(A)
+v
+```
+
+```{.python .input}
+#@tab tensorflow
+A = tf.constant([[1.0, 0.1, 0.1, 0.1],
+                [0.1, 3.0, 0.2, 0.3],
+                [0.1, 0.2, 5.0, 0.5],
+                [0.1, 0.3, 0.5, 9.0]])
+
+v, _ = tf.linalg.eigh(A)
+v
+```
+
 In this way, eigenvalues can be approximated, 
 and the approximations will be fairly accurate 
 in the case that the diagonal is 
@@ -279,7 +320,7 @@ it is good to get any intuitive grasp we can.
 ## A Useful Application: The Growth of Iterated Maps
 
 Now that we understand what eigenvectors are in principle,
-let's see how they can be used to provide a deep understanding 
+let us see how they can be used to provide a deep understanding 
 of a problem central to neural network behavior: proper weight initialization. 
 
 ### Eigenvectors as Long Term Behavior
@@ -299,7 +340,7 @@ $$
 $$
 
 When these models are initialized, $A$ is taken to be 
-a random matrix with Gaussian entries, so let's make one of those. 
+a random matrix with Gaussian entries, so let us make one of those. 
 To be concrete, we start with a mean zero, variance one Gaussian distributed $5 \times 5$ matrix.
 
 ```{.python .input}
@@ -310,11 +351,27 @@ A = np.random.randn(k, k)
 A
 ```
 
+```{.python .input}
+#@tab pytorch
+torch.manual_seed(42)
+
+k = 5
+A = torch.randn(k, k, dtype=torch.float64)
+A
+```
+
+```{.python .input}
+#@tab tensorflow
+k = 5
+A = tf.random.normal((k, k), dtype=tf.float64)
+A
+```
+
 ### Behavior on Random Data
 For simplicity in our toy model, 
 we will assume that the data vector we feed in $\mathbf{v}_{in}$ 
 is a random five dimensional Gaussian vector.
-Let's think about what we want to have happen.
+Let us think about what we want to have happen.
 For context, lets think of a generic ML problem,
 where we are trying to turn input data, like an image, into a prediction, 
 like the probability the image is a picture of a cat.
@@ -332,11 +389,11 @@ and the output will not depend on the input. This is also clearly not right eith
 We need to walk the narrow line between growth and decay 
 to make sure that our output changes depending on our input, but not much!
 
-Let's see what happens when we repeatedly multiply our matrix $\mathbf{A}$ 
+Let us see what happens when we repeatedly multiply our matrix $\mathbf{A}$ 
 against a random input vector, and keep track of the norm.
 
 ```{.python .input}
-# Calculate the sequence of norms after repeatedly applying A
+# Calculate the sequence of norms after repeatedly applying `A`
 v_in = np.random.randn(k, 1)
 
 norm_list = [np.linalg.norm(v_in)]
@@ -345,6 +402,32 @@ for i in range(1, 100):
     norm_list.append(np.linalg.norm(v_in))
 
 d2l.plot(np.arange(0, 100), norm_list, 'Iteration', 'Value')
+```
+
+```{.python .input}
+#@tab pytorch
+# Calculate the sequence of norms after repeatedly applying `A`
+v_in = torch.randn(k, 1, dtype=torch.float64)
+
+norm_list = [torch.norm(v_in).item()]
+for i in range(1, 100):
+    v_in = A @ v_in
+    norm_list.append(torch.norm(v_in).item())
+
+d2l.plot(torch.arange(0, 100), norm_list, 'Iteration', 'Value')
+```
+
+```{.python .input}
+#@tab tensorflow
+# Calculate the sequence of norms after repeatedly applying `A`
+v_in = tf.random.normal((k, 1), dtype=tf.float64)
+
+norm_list = [tf.norm(v_in).numpy()]
+for i in range(1, 100):
+    v_in = tf.matmul(A, v_in)
+    norm_list.append(tf.norm(v_in).numpy())
+
+d2l.plot(tf.range(0, 100), norm_list, 'Iteration', 'Value')
 ```
 
 The norm is growing uncontrollably! 
@@ -359,6 +442,26 @@ for i in range(1, 100):
 d2l.plot(np.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
 ```
 
+```{.python .input}
+#@tab pytorch
+# Compute the scaling factor of the norms
+norm_ratio_list = []
+for i in range(1, 100):
+    norm_ratio_list.append(norm_list[i]/norm_list[i - 1])
+
+d2l.plot(torch.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
+```
+
+```{.python .input}
+#@tab tensorflow
+# Compute the scaling factor of the norms
+norm_ratio_list = []
+for i in range(1, 100):
+    norm_ratio_list.append(norm_list[i]/norm_list[i - 1])
+
+d2l.plot(tf.range(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
+```
+
 If we look at the last portion of the above computation, 
 we see that the random vector is stretched by a factor of `1.974459321485[...]`,
 where the portion at the end shifts a little, 
@@ -369,20 +472,38 @@ but the stretching factor is stable.
 We have seen that eigenvectors and eigenvalues correspond 
 to the amount something is stretched, 
 but that was for specific vectors, and specific stretches.
-Let's take a look at what they are for $\mathbf{A}$.
+Let us take a look at what they are for $\mathbf{A}$.
 A bit of a caveat here: it turns out that to see them all,
 we will need to go to complex numbers.
 You can think of these as stretches and rotations.
 By taking the norm of the complex number
 (square root of the sums of squares of real and imaginary parts)
-we can measure that stretching factor. Let's also sort them.
+we can measure that stretching factor. Let us also sort them.
 
 ```{.python .input}
 # Compute the eigenvalues
 eigs = np.linalg.eigvals(A).tolist()
 norm_eigs = [np.absolute(x) for x in eigs]
 norm_eigs.sort()
-"Norms of eigenvalues: {}".format(norm_eigs)
+print(f'norms of eigenvalues: {norm_eigs}')
+```
+
+```{.python .input}
+#@tab pytorch
+# Compute the eigenvalues
+eigs = torch.eig(A)[0][:,0].tolist()
+norm_eigs = [torch.abs(torch.tensor(x)) for x in eigs]
+norm_eigs.sort()
+print(f'norms of eigenvalues: {norm_eigs}')
+```
+
+```{.python .input}
+#@tab tensorflow
+# Compute the eigenvalues
+eigs = tf.linalg.eigh(A)[0].numpy().tolist()
+norm_eigs = [tf.abs(tf.constant(x, dtype=tf.float64)) for x in eigs]
+norm_eigs.sort()
+print(f'norms of eigenvalues: {norm_eigs}')
 ```
 
 ### An Observation
@@ -417,7 +538,7 @@ for all practical purposes, our random vector has been transformed
 into the principle eigenvector!
 Indeed this algorithm is the basis 
 for what is known as the *power iteration*
-for finding the largest eigenvalue and eigenvector of a matrix.  For details see, for example, :cite:`Van-Loan.Golub.1983`.
+for finding the largest eigenvalue and eigenvector of a matrix. For details see, for example, :cite:`Van-Loan.Golub.1983`.
 
 ### Fixing the Normalization
 
@@ -426,10 +547,10 @@ that we do not want a random vector to be stretched or squished at all,
 we would like random vectors to stay about the same size throughout the entire process.
 To do so, we now rescale our matrix by this principle eigenvalue 
 so that the largest eigenvalue is instead now just one.
-Let's see what happens in this case.
+Let us see what happens in this case.
 
 ```{.python .input}
-# Rescale the matrix A
+# Rescale the matrix `A`
 A /= norm_eigs[-1]
 
 # Do the same experiment again
@@ -443,7 +564,39 @@ for i in range(1, 100):
 d2l.plot(np.arange(0, 100), norm_list, 'Iteration', 'Value')
 ```
 
-We can also plot the ration between consecutive norms as before and see that indeed it stabilizes.
+```{.python .input}
+#@tab pytorch
+# Rescale the matrix `A`
+A /= norm_eigs[-1]
+
+# Do the same experiment again
+v_in = torch.randn(k, 1, dtype=torch.float64)
+
+norm_list = [torch.norm(v_in).item()]
+for i in range(1, 100):
+    v_in = A @ v_in
+    norm_list.append(torch.norm(v_in).item())
+
+d2l.plot(torch.arange(0, 100), norm_list, 'Iteration', 'Value')
+```
+
+```{.python .input}
+#@tab tensorflow
+# Rescale the matrix `A`
+A /= norm_eigs[-1]
+
+# Do the same experiment again
+v_in = tf.random.normal((k, 1), dtype=tf.float64)
+
+norm_list = [tf.norm(v_in).numpy()]
+for i in range(1, 100):
+    v_in = tf.matmul(A, v_in)
+    norm_list.append(tf.norm(v_in).numpy())
+
+d2l.plot(tf.range(0, 100), norm_list, 'Iteration', 'Value')
+```
+
+We can also plot the ratio between consecutive norms as before and see that indeed it stabilizes.
 
 ```{.python .input}
 # Also plot the ratio
@@ -452,6 +605,26 @@ for i in range(1, 100):
     norm_ratio_list.append(norm_list[i]/norm_list[i-1])
 
 d2l.plot(np.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
+```
+
+```{.python .input}
+#@tab pytorch
+# Also plot the ratio
+norm_ratio_list = []
+for i in range(1, 100):
+    norm_ratio_list.append(norm_list[i]/norm_list[i-1])
+
+d2l.plot(torch.arange(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
+```
+
+```{.python .input}
+#@tab tensorflow
+# Also plot the ratio
+norm_ratio_list = []
+for i in range(1, 100):
+    norm_ratio_list.append(norm_list[i]/norm_list[i-1])
+
+d2l.plot(tf.range(1, 100), norm_ratio_list, 'Iteration', 'Ratio')
 ```
 
 ## Conclusions
@@ -501,6 +674,15 @@ $$
 \end{bmatrix}.
 $$
 
-## [Discussions](https://discuss.mxnet.io/t/5148)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/411)
+:end_tab:
 
-![](../img/qr_eigendecomposition.svg)
+:begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1086)
+:end_tab:
+
+
+:begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1087)
+:end_tab:

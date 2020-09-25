@@ -14,14 +14,14 @@ interest appear in different positions, reducing the model's dependence on the
 position where objects appear. We can also adjust the brightness, color, and
 other factors to reduce model's sensitivity to color. It can be said that image
 augmentation technology contributed greatly to the success of AlexNet. In this
-section we will discuss this technology, which is widely used in computer
+section, we will discuss this technology, which is widely used in computer
 vision.
 
 First, import the packages or modules required for the experiment in this section.
 
 ```{.python .input  n=1}
 %matplotlib inline
-import d2l
+from d2l import mxnet as d2l
 from mxnet import autograd, gluon, image, init, np, npx
 from mxnet.gluon import nn
 
@@ -33,7 +33,7 @@ npx.set_np()
 In this experiment, we will use an image with a shape of $400\times 500$ as an example.
 
 ```{.python .input  n=2}
-d2l.set_figsize((3.5, 2.5))
+d2l.set_figsize()
 img = image.imread('../img/cat1.jpg')
 d2l.plt.imshow(img.asnumpy());
 ```
@@ -118,7 +118,7 @@ d2l.show_images(gluon.data.vision.CIFAR10(
     train=True)[0:32][0], 4, 8, scale=0.8);
 ```
 
-In order to obtain a definitive results during prediction, we usually only apply image augmentation to the training example, and do not use image augmentation with random operations during prediction. Here, we only use the simplest random left-right flipping method. In addition, we use a `ToTensor` instance to convert minibatch images into the format required by MXNet, i.e., 32-bit floating point numbers with the shape of (batch size, number of channels, height, width) and value range between 0 and 1.
+In order to obtain definitive results during prediction, we usually only apply image augmentation to the training example, and do not use image augmentation with random operations during prediction. Here, we only use the simplest random left-right flipping method. In addition, we use a `ToTensor` instance to convert minibatch images into the format required by MXNet, i.e., 32-bit floating point numbers with the shape of (batch size, number of channels, height, width) and value range between 0 and 1.
 
 ```{.python .input  n=12}
 train_augs = gluon.data.vision.transforms.Compose([
@@ -133,7 +133,7 @@ Next, we define an auxiliary function to make it easier to read the image and
 apply image augmentation. The `transform_first` function provided by Gluon's
 dataset applies image augmentation to the first element of each training
 example (image and label), i.e., the element at the top of the image. For
-detailed description of `DataLoader`, refer to :numref:`sec_fashion_mnist`.
+detailed descriptions of `DataLoader`, refer to :numref:`sec_fashion_mnist`.
 
 ```{.python .input  n=13}
 def load_cifar10(is_train, augs, batch_size):
@@ -147,22 +147,24 @@ def load_cifar10(is_train, augs, batch_size):
 
 We train the ResNet-18 model described in :numref:`sec_resnet` on the
 CIFAR-10 dataset. We will also apply the methods described in
-:numref:`sec_multi_gpu_gluon` and use a multi-GPU training model.
+:numref:`sec_multi_gpu_concise` and use a multi-GPU training model.
 
 Next, we define the training function to train and evaluate the model using multiple GPUs.
 
 ```{.python .input  n=14}
-# Saved in the d2l package for later use
-def train_batch_ch13(net, features, labels, loss, trainer, ctx_list,
+#@save
+def train_batch_ch13(net, features, labels, loss, trainer, devices,
                      split_f=d2l.split_batch):
-    X_shards, y_shards = split_f(features, labels, ctx_list)
+    X_shards, y_shards = split_f(features, labels, devices)
     with autograd.record():
         pred_shards = [net(X_shard) for X_shard in X_shards]
         ls = [loss(pred_shard, y_shard) for pred_shard, y_shard
               in zip(pred_shards, y_shards)]
     for l in ls:
         l.backward()
-    trainer.step(labels.shape[0])
+    # The True flag allows parameters with stale gradients, which is useful
+    # later (e.g., in fine-tuning BERT)
+    trainer.step(labels.shape[0], ignore_stale_grad=True)
     train_loss_sum = sum([float(l.sum()) for l in ls])
     train_acc_sum = sum(d2l.accuracy(pred_shard, y_shard)
                         for pred_shard, y_shard in zip(pred_shards, y_shards))
@@ -170,9 +172,9 @@ def train_batch_ch13(net, features, labels, loss, trainer, ctx_list,
 ```
 
 ```{.python .input  n=16}
-# Saved in the d2l package for later use
+#@save
 def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
-               ctx_list=d2l.try_all_gpus(), split_f=d2l.split_batch):
+               devices=d2l.try_all_gpus(), split_f=d2l.split_batch):
     num_batches, timer = len(train_iter), d2l.Timer()
     animator = d2l.Animator(xlabel='epoch', xlim=[0, num_epochs], ylim=[0, 1],
                             legend=['train loss', 'train acc', 'test acc'])
@@ -182,7 +184,7 @@ def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
         for i, (features, labels) in enumerate(train_iter):
             timer.start()
             l, acc = train_batch_ch13(
-                net, features, labels, loss, trainer, ctx_list, split_f)
+                net, features, labels, loss, trainer, devices, split_f)
             metric.add(l, acc, labels.shape[0], labels.size)
             timer.stop()
             if (i + 1) % (num_batches // 5) == 0:
@@ -191,17 +193,17 @@ def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
                               None))
         test_acc = d2l.evaluate_accuracy_gpus(net, test_iter, split_f)
         animator.add(epoch + 1, (None, None, test_acc))
-    print('loss %.3f, train acc %.3f, test acc %.3f' % (
-        metric[0] / metric[2], metric[1] / metric[3], test_acc))
-    print('%.1f examples/sec on %s' % (
-        metric[2] * num_epochs / timer.sum(), ctx_list))
+    print(f'loss {metric[0] / metric[2]:.3f}, train acc '
+          f'{metric[1] / metric[3]:.3f}, test acc {test_acc:.3f}')
+    print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec on '
+          f'{str(devices)}')
 ```
 
-Now, we can define the `train_with_data_aug` function to use image augmentation to train the model. This function obtains all available GPUs and uses Adam as the optimization algorithm for training. It then applies image augmentation to the training dataset, and finally calls the `train` function just defined to train and evaluate the model.
+Now, we can define the `train_with_data_aug` function to use image augmentation to train the model. This function obtains all available GPUs and uses Adam as the optimization algorithm for training. It then applies image augmentation to the training dataset, and finally calls the `train_ch13` function just defined to train and evaluate the model.
 
 ```{.python .input  n=18}
-batch_size, ctx, net = 256, d2l.try_all_gpus(), d2l.resnet18(10)
-net.initialize(init=init.Xavier(), ctx=ctx)
+batch_size, devices, net = 256, d2l.try_all_gpus(), d2l.resnet18(10)
+net.initialize(init=init.Xavier(), ctx=devices)
 
 def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
     train_iter = load_cifar10(True, train_augs, batch_size)
@@ -209,7 +211,7 @@ def train_with_data_aug(train_augs, test_augs, net, lr=0.001):
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     trainer = gluon.Trainer(net.collect_params(), 'adam',
                             {'learning_rate': lr})
-    train_ch13(net, train_iter, test_iter, loss, trainer, 10, ctx)
+    train_ch13(net, train_iter, test_iter, loss, trainer, 10, devices)
 ```
 
 Now we train the model using image augmentation of random flipping left and right.
@@ -221,7 +223,7 @@ train_with_data_aug(train_augs, test_augs, net)
 ## Summary
 
 * Image augmentation generates random images based on existing training data to cope with overfitting.
-* In order to obtain a definitive results during prediction, we usually only apply image augmentation to the training example, and do not use image augmentation with random operations during prediction.
+* In order to obtain definitive results during prediction, we usually only apply image augmentation to the training example, and do not use image augmentation with random operations during prediction.
 * We can obtain classes related to image augmentation from Gluon's `transforms` module.
 
 ## Exercises
@@ -230,6 +232,6 @@ train_with_data_aug(train_augs, test_augs, net)
 1. Add different image augmentation methods in model training based on the CIFAR-10 dataset. Observe the implementation results.
 1. With reference to the MXNet documentation, what other image augmentation methods are provided in Gluon's `transforms` module?
 
-## [Discussions](https://discuss.mxnet.io/t/2442)
-
-![](../img/qr_image-augmentation.svg)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/367)
+:end_tab:

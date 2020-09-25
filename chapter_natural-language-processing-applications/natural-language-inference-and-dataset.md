@@ -8,21 +8,20 @@ However, when there is a need to decide whether one sentence can be inferred for
 or eliminate redundancy by identifying sentences that are semantically equivalent,
 knowing how to classify one text sequence is insufficient.
 Instead, we need to be able to reason over pairs of text sequences.
-It results in 
 
 
 ## Natural Language Inference
 
-*Natural language inference* (NLI) studies whether a *hypothesis*
+*Natural language inference* studies whether a *hypothesis*
 can be inferred from a *premise*, where both are a text sequence.
-In other words, NLI determines the logical relationship between a pair of text sequences.
+In other words, natural language inference determines the logical relationship between a pair of text sequences.
 Such relationships usually fall into three types:
 
 * *Entailment*: the hypothesis can be inferred from the premise.
 * *Contradiction*: the negation of the hypothesis can be inferred from the premise.
 * *Neutral*: all the other cases.
 
-NLI is also known as the recognizing textual entailment task.
+Natural language inference is also known as the recognizing textual entailment task.
 For example, the following pair will be labeled as *entailment* because "showing affection" in the hypothesis can be inferred from "hugging one another" in the premise.
 
 > Premise: Two women are hugging each other.
@@ -41,10 +40,10 @@ The third example shows a *neutrality* relationship because neither "famous" nor
 
 > Hypothesis: The musicians are famous.
 
-NLI has been a central topic for understanding natural language.
+Natural language inference has been a central topic for understanding natural language.
 It enjoys wide applications ranging from
 information retrieval to open-domain question answering.
-To study this problem, we will begin by investigating a popular NLI benchmark dataset.
+To study this problem, we will begin by investigating a popular natural language inference benchmark dataset.
 
 
 ## The Stanford Natural Language Inference (SNLI) Dataset
@@ -54,7 +53,7 @@ We download and store the extracted SNLI dataset in the path `../data/snli_1.0`.
 
 ```{.python .input  n=28}
 import collections
-import d2l
+from d2l import mxnet as d2l
 from mxnet import gluon, np, npx
 import os
 import re
@@ -62,7 +61,7 @@ import zipfile
 
 npx.set_np()
 
-# Saved in the d2l package for later use
+#@save
 d2l.DATA_HUB['SNLI'] = (
     'https://nlp.stanford.edu/projects/snli/snli_1.0.zip',
     '9fcde07509c7e87ec61c640c1b2753d9041758e4')
@@ -75,19 +74,19 @@ data_dir = d2l.download_extract('SNLI')
 The original SNLI dataset contains much richer information than what we really need in our experiments. Thus, we define a function `read_snli` to only extract part of the dataset, then return lists of premises, hypotheses, and their labels.
 
 ```{.python .input  n=66}
-# Saved in the d2l package for later use
+#@save
 def read_snli(data_dir, is_train):
     """Read the SNLI dataset into premises, hypotheses, and labels."""
     def extract_text(s):
         # Remove information that will not be used by us
-        s = re.sub('\(', '', s) 
-        s = re.sub('\)', '', s)
+        s = re.sub('\\(', '', s) 
+        s = re.sub('\\)', '', s)
         # Substitute two or more consecutive whitespace with space
-        s = re.sub('\s{2,}', ' ', s)
+        s = re.sub('\\s{2,}', ' ', s)
         return s.strip()
     label_set = {'entailment': 0, 'contradiction': 1, 'neutral': 2}
-    file_name = (data_dir + 'snli_1.0_'+ ('train' if is_train else 'test')
-                 + '.txt')
+    file_name = os.path.join(data_dir, 'snli_1.0_train.txt'
+                             if is_train else 'snli_1.0_test.txt')
     with open(file_name, 'r') as f:
         rows = [row.split('\t') for row in f.readlines()[1:]]
     premises = [extract_text(row[1]) for row in rows if row[0] in label_set]
@@ -96,7 +95,7 @@ def read_snli(data_dir, is_train):
     return premises, hypotheses, labels
 ```
 
-Now let's print the first $3$ pairs of premise and hypothesis, as well as their labels ("0", "1", and "2" correspond to "entailment", "contradiction", and "neutral", respectively ).
+Now let us print the first $3$ pairs of premise and hypothesis, as well as their labels ("0", "1", and "2" correspond to "entailment", "contradiction", and "neutral", respectively ).
 
 ```{.python .input  n=70}
 train_data = read_snli(data_dir, is_train=True)
@@ -126,7 +125,7 @@ tokens after the first `num_steps` ones in longer sequence are trimmed, while sp
 By implementing the `__getitem__` function, we can arbitrarily access the premise, hypothesis, and label with the index `idx`.
 
 ```{.python .input  n=115}
-# Saved in the d2l package for later use
+#@save
 class SNLIDataset(gluon.data.Dataset):
     """A customized dataset to load the SNLI dataset."""
     def __init__(self, dataset, num_steps, vocab=None):
@@ -163,7 +162,7 @@ as that of the testing set.
 As a result, any new token from the testing set will be unknown to the model trained on the training set.
 
 ```{.python .input  n=114}
-# Saved in the d2l package for later use
+#@save
 def load_data_snli(batch_size, num_steps=50):
     """Download the SNLI dataset and return data iterators and vocabulary."""
     num_workers = d2l.get_dataloader_workers()
@@ -202,18 +201,17 @@ for X, Y in train_iter:
 
 ## Summary
 
-* Natural language inference (NLI) studies whether a hypothesis can be inferred from a premise, where both are a text sequence.
-* In NLI, relationships between premises and hypotheses include entailment, contradiction, and neutral.
-* Stanford Natural Language Inference (SNLI) Corpus is a popular benchmark dataset of NLI.
+* Natural language inference studies whether a hypothesis can be inferred from a premise, where both are a text sequence.
+* In natural language inference, relationships between premises and hypotheses include entailment, contradiction, and neutral.
+* Stanford Natural Language Inference (SNLI) Corpus is a popular benchmark dataset of natural language inference.
 
 
 ## Exercises
 
-1. Machine translation has long been evaluated based on superficial $n$-gram matching between an output translation and a ground-truth translation. Can you design a measure for evaluating machine translation results by using NLI?
+1. Machine translation has long been evaluated based on superficial $n$-gram matching between an output translation and a ground-truth translation. Can you design a measure for evaluating machine translation results by using natural language inference?
 1. How can we change hyperparameters to reduce the vocabulary size? 
 
 
-
-## [Discussions](https://discuss.mxnet.io/t/5517)
-
-![](../img/qr_natural-language-inference-and-dataset.svg)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/394)
+:end_tab:

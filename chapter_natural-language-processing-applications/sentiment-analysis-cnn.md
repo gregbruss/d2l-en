@@ -9,7 +9,7 @@ used recurrent neural networks to process such data. In fact, we can also treat
 text as a one-dimensional image, so that we can use one-dimensional
 convolutional neural networks to capture associations between adjacent
 words. 
-As described in :label:`fig_nlp-map-sa-cnn`
+As described in :numref:`fig_nlp-map-sa-cnn`
 This section describes a groundbreaking approach to applying
 convolutional neural networks to sentiment analysis: textCNN :cite:`Kim.2014`.
 
@@ -19,9 +19,8 @@ convolutional neural networks to sentiment analysis: textCNN :cite:`Kim.2014`.
 First, import the packages and modules required for the experiment.
 
 ```{.python .input  n=1}
-import d2l
+from d2l import mxnet as d2l
 from mxnet import gluon, init, np, npx
-from mxnet.contrib import text
 from mxnet.gluon import nn
 npx.set_np()
 
@@ -31,7 +30,7 @@ train_iter, test_iter, vocab = d2l.load_data_imdb(batch_size)
 
 ## One-Dimensional Convolutional Layer
 
-Before introducing the model, let's explain how a one-dimensional convolutional layer works. Like a two-dimensional convolutional layer, a one-dimensional convolutional layer uses a one-dimensional cross-correlation operation. In the one-dimensional cross-correlation operation, the convolution window starts from the leftmost side of the input array and slides on the input array from left to right successively. When the convolution window slides to a certain position, the input subarray in the window and kernel array are multiplied and summed by element to get the element at the corresponding location in the output array. As shown in :numref:`fig_conv1d`, the input is a one-dimensional array with a width of 7 and the width of the kernel array is 2. As we can see, the output width is $7-2+1=6$ and the first element is obtained by performing multiplication by element on the leftmost input subarray with a width of 2 and kernel array and then summing the results.
+Before introducing the model, let us explain how a one-dimensional convolutional layer works. Like a two-dimensional convolutional layer, a one-dimensional convolutional layer uses a one-dimensional cross-correlation operation. In the one-dimensional cross-correlation operation, the convolution window starts from the leftmost side of the input array and slides on the input array from left to right successively. When the convolution window slides to a certain position, the input subarray in the window and kernel array are multiplied and summed by element to get the element at the corresponding location in the output array. As shown in :numref:`fig_conv1d`, the input is a one-dimensional array with a width of 7 and the width of the kernel array is 2. As we can see, the output width is $7-2+1=6$ and the first element is obtained by performing multiplication by element on the leftmost input subarray with a width of 2 and kernel array and then summing the results.
 
 ![One-dimensional cross-correlation operation. The shaded parts are the first output element as well as the input and kernel array elements used in its calculation: $0\times1+1\times2=2$. ](../img/conv1d.svg)
 :label:`fig_conv1d`
@@ -63,9 +62,9 @@ Now, we reproduce the results of the one-dimensional cross-correlation operation
 
 ```{.python .input  n=4}
 def corr1d_multi_in(X, K):
-    # First, we traverse along the 0th dimension (channel dimension) of X and
-    # K. Then, we add them together by using * to turn the result list into a
-    # positional argument of the add_n function
+    # First, we traverse along the 0th dimension (channel dimension) of `X`
+    # and `K`. Then, we add them together by using * to turn the result list
+    # into a positional argument of the `add_n` function
     return sum(corr1d(x, k) for x, k in zip(X, K))
 
 X = np.array([[0, 1, 2, 3, 4, 5, 6],
@@ -91,7 +90,7 @@ convolutional layer to extend the model parameters in the convolutional layer.
 
 ## Max-Over-Time Pooling Layer
 
-Similarly, we have a one-dimensional pooling layer. The max-over-time pooling layer used in TextCNN actually corresponds to a one-dimensional global maximum pooling layer. Assuming that the input contains multiple channels, and each channel consists of values on different timesteps, the output of each channel will be the largest value of all timesteps in the channel. Therefore, the input of the max-over-time pooling layer can have different timesteps on each channel.
+Similarly, we have a one-dimensional pooling layer. The max-over-time pooling layer used in TextCNN actually corresponds to a one-dimensional global maximum pooling layer. Assuming that the input contains multiple channels, and each channel consists of values on different time steps, the output of each channel will be the largest value of all time steps in the channel. Therefore, the input of the max-over-time pooling layer can have different time steps on each channel.
 
 To improve computing performance, we often combine timing examples of different lengths into a minibatch and make the lengths of each timing example in the batch consistent by appending special characters (such as 0) to the end of shorter examples. Naturally, the added special characters have no intrinsic meaning. Because the main purpose of the max-over-time pooling layer is to capture the most important features of timing, it usually allows the model to be unaffected by the manually added characters.
 
@@ -130,7 +129,7 @@ class TextCNN(nn.Block):
 
     def forward(self, inputs):
         # Concatenate the output of two embedding layers with shape of
-        # (batch size, number of words, word vector dimension) by word vector
+        # (batch size, no. of words, word vector dimension) by word vector
         embeddings = np.concatenate((
             self.embedding(inputs), self.constant_embedding(inputs)), axis=2)
         # According to the input format required by Conv1D, the word vector
@@ -154,9 +153,9 @@ Create a TextCNN instance. It has 3 convolutional layers with kernel widths of 3
 
 ```{.python .input  n=6}
 embed_size, kernel_sizes, nums_channels = 100, [3, 4, 5], [100, 100, 100]
-ctx = d2l.try_all_gpus()
+devices = d2l.try_all_gpus()
 net = TextCNN(len(vocab), embed_size, kernel_sizes, nums_channels)
-net.initialize(init.Xavier(), ctx=ctx)
+net.initialize(init.Xavier(), ctx=devices)
 ```
 
 ### Load Pre-trained Word Vectors
@@ -164,9 +163,8 @@ net.initialize(init.Xavier(), ctx=ctx)
 As in the previous section, load pre-trained 100-dimensional GloVe word vectors and initialize the embedding layers `embedding` and `constant_embedding`. Here, the former participates in training while the latter has a fixed weight.
 
 ```{.python .input  n=7}
-glove_embedding = text.embedding.create(
-    'glove', pretrained_file_name='glove.6B.100d.txt')
-embeds = glove_embedding.get_vecs_by_tokens(vocab.idx_to_token)
+glove_embedding = d2l.TokenEmbedding('glove.6b.100d')
+embeds = glove_embedding[vocab.idx_to_token]
 net.embedding.weight.set_data(embeds)
 net.constant_embedding.weight.set_data(embeds)
 net.constant_embedding.collect_params().setattr('grad_req', 'null')
@@ -180,7 +178,7 @@ Now we can train the model.
 lr, num_epochs = 0.001, 5
 trainer = gluon.Trainer(net.collect_params(), 'adam', {'learning_rate': lr})
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
-d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, ctx)
+d2l.train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 ```
 
 Below, we use the trained model to classify sentiments of two simple sentences.
@@ -197,16 +195,16 @@ d2l.predict_sentiment(net, vocab, 'this movie is so bad')
 
 * We can use one-dimensional convolution to process and analyze timing data.
 * A one-dimensional cross-correlation operation with multiple input channels can be regarded as a two-dimensional cross-correlation operation with a single input channel.
-* The input of the max-over-time pooling layer can have different numbers of timesteps on each channel.
+* The input of the max-over-time pooling layer can have different numbers of time steps on each channel.
 * TextCNN mainly uses a one-dimensional convolutional layer and max-over-time pooling layer.
 
 
 ## Exercises
 
-1. Tune the hyper-parameters and compare the two sentiment analysis methods, using recurrent neural networks and using convolutional neural networks, as regards accuracy and operational efficiency.
-1. Can you further improve the accuracy of the model on the test set by using the three methods introduced in the previous section: tuning hyper-parameters, using larger pre-trained word vectors, and using the spaCy word tokenization tool?
+1. Tune the hyperparameters and compare the two sentiment analysis methods, using recurrent neural networks and using convolutional neural networks, as regards accuracy and operational efficiency.
+1. Can you further improve the accuracy of the model on the test set by using the three methods introduced in the previous section: tuning hyperparameters, using larger pre-trained word vectors, and using the spaCy word tokenization tool?
 1. What other natural language processing tasks can you use textCNN for?
 
-## [Discussions](https://discuss.mxnet.io/t/2392)
-
-![](../img/qr_sentiment-analysis-cnn.svg)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/393)
+:end_tab:

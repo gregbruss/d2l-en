@@ -4,19 +4,19 @@
 In :numref:`sec_calculus`, we saw the basic elements of differential calculus.  This section takes a deeper dive into the fundamentals of calculus and how we can understand and apply it in the context of machine learning.
 
 ## Differential Calculus
-Differential calculus is fundamentally the study of how functions behave under small changes.  To see why this is so core to deep learning, let's consider an example.
+Differential calculus is fundamentally the study of how functions behave under small changes.  To see why this is so core to deep learning, let us consider an example.
 
 Suppose that we have a deep neural network where the weights are, for convenience, concatenated into a single vector $\mathbf{w} = (w_1, \ldots, w_n)$.  Given a training dataset, we consider the loss of our neural network on this dataset, which we will write as $\mathcal{L}(\mathbf{w})$.  
 
 This function is extraordinarily complex, encoding the performance of all possible models of the given architecture on this dataset, so it is nearly impossible to tell what set of weights $\mathbf{w}$ will minimize the loss. Thus, in practice, we often start by initializing our weights *randomly*, and then iteratively take small steps in the direction which makes the loss decrease as rapidly as possible.
 
-The question then becomes something that on the surface is no easier: how do we find the direction which makes the weights decrease as quickly as possible?  To dig into this, let's first examine the case with only a single weight: $L(\mathbf{w}) = L(x)$ for a single real value $x$. 
+The question then becomes something that on the surface is no easier: how do we find the direction which makes the weights decrease as quickly as possible?  To dig into this, let us first examine the case with only a single weight: $L(\mathbf{w}) = L(x)$ for a single real value $x$. 
 
-Let's take $x$ and try to understand what happens when we change it by a small amount to $x + \epsilon$. If you wish to be concrete, think a number like $\epsilon = 0.0000001$.  To help us visualize what happens, let's graph an example function, $f(x) = \sin(x^x)$, over the $[0, 3]$.
+Let us take $x$ and try to understand what happens when we change it by a small amount to $x + \epsilon$. If you wish to be concrete, think a number like $\epsilon = 0.0000001$.  To help us visualize what happens, let us graph an example function, $f(x) = \sin(x^x)$, over the $[0, 3]$.
 
 ```{.python .input}
 %matplotlib inline
-import d2l
+from d2l import mxnet as d2l
 from IPython import display
 from mxnet import np, npx
 npx.set_np()
@@ -24,6 +24,34 @@ npx.set_np()
 # Plot a function in a normal range
 x_big = np.arange(0.01, 3.01, 0.01)
 ys = np.sin(x_big**x_big)
+d2l.plot(x_big, ys, 'x', 'f(x)')
+```
+
+```{.python .input}
+#@tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+from IPython import display
+import torch
+torch.pi = torch.acos(torch.zeros(1)).item() * 2  # Define pi in torch
+
+# Plot a function in a normal range
+x_big = torch.arange(0.01, 3.01, 0.01)
+ys = torch.sin(x_big**x_big)
+d2l.plot(x_big, ys, 'x', 'f(x)')
+```
+
+```{.python .input}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+from IPython import display
+import tensorflow as tf
+tf.pi = tf.acos(tf.zeros(1)).numpy() * 2  # Define pi in TensorFlow
+
+# Plot a function in a normal range
+x_big = tf.range(0.01, 3.01, 0.01)
+ys = tf.sin(x_big**x_big)
 d2l.plot(x_big, ys, 'x', 'f(x)')
 ```
 
@@ -36,12 +64,44 @@ ys = np.sin(x_med**x_med)
 d2l.plot(x_med, ys, 'x', 'f(x)')
 ```
 
+```{.python .input}
+#@tab pytorch
+# Plot a the same function in a tiny range
+x_med = torch.arange(1.75, 2.25, 0.001)
+ys = torch.sin(x_med**x_med)
+d2l.plot(x_med, ys, 'x', 'f(x)')
+```
+
+```{.python .input}
+#@tab tensorflow
+# Plot a the same function in a tiny range
+x_med = tf.range(1.75, 2.25, 0.001)
+ys = tf.sin(x_med**x_med)
+d2l.plot(x_med, ys, 'x', 'f(x)')
+```
+
 Taking this to an extreme, if we zoom into a tiny segment, the behavior becomes far simpler: it is just a straight line.
 
 ```{.python .input}
 # Plot a the same function in a tiny range
 x_small = np.arange(2.0, 2.01, 0.0001)
 ys = np.sin(x_small**x_small)
+d2l.plot(x_small, ys, 'x', 'f(x)')
+```
+
+```{.python .input}
+#@tab pytorch
+# Plot a the same function in a tiny range
+x_small = torch.arange(2.0, 2.01, 0.0001)
+ys = torch.sin(x_small**x_small)
+d2l.plot(x_small, ys, 'x', 'f(x)')
+```
+
+```{.python .input}
+#@tab tensorflow
+# Plot a the same function in a tiny range
+x_small = tf.range(2.0, 2.01, 0.0001)
+ys = tf.sin(x_small**x_small)
 d2l.plot(x_small, ys, 'x', 'f(x)')
 ```
 
@@ -56,14 +116,14 @@ $$
 This is already enough to start to play around with in code.  For instance, suppose that we know that $L(x) = x^{2} + 1701(x-4)^3$, then we can see how large this value is at the point $x = 4$ as follows.
 
 ```{.python .input}
+#@tab all
 # Define our function
 def L(x):
     return x**2 + 1701*(x-4)**3
 
 # Print the difference divided by epsilon for several epsilon
 for epsilon in [0.1, 0.001, 0.0001, 0.00001]:
-    print("epsilon = {:.5f} -> {:.5f}".format(
-        epsilon, (L(4+epsilon) - L(4)) / epsilon))
+    print(f'epsilon = {epsilon:.5f} -> {(L(4+epsilon) - L(4)) / epsilon:.5f}')
 ```
 
 Now, if we are observant, we will notice that the output of this number is suspiciously close to $8$.  Indeed, if we decrease $\epsilon$, we will see value becomes progressively closer to $8$.  Thus we may conclude, correctly, that the value we seek (the degree a change in the input changes the output) should be $8$ at the point $x=4$.  The way that a mathematician encodes this fact is
@@ -120,7 +180,7 @@ If every derivative needed to be separately computed and stored in a table, diff
 * **Product rule.** $\frac{d}{dx}\left(g(x)\cdot h(x)\right) = g(x)\frac{dh}{dx}(x) + \frac{dg}{dx}(x)h(x)$.
 * **Chain rule.** $\frac{d}{dx}g(h(x)) = \frac{dg}{dh}(h(x))\cdot \frac{dh}{dx}(x)$.
 
-Let's see how we may use :eqref:`eq_small_change` to understand these rules.  For the sum rule, consider following chain of reasoning:
+Let us see how we may use :eqref:`eq_small_change` to understand these rules.  For the sum rule, consider following chain of reasoning:
 
 $$
 \begin{aligned}
@@ -207,16 +267,44 @@ approximates the value of $f$ by a line which passes through the point $(x, f(x)
 xs = np.arange(-np.pi, np.pi, 0.01)
 plots = [np.sin(xs)]
 
-# Compute some linear approximations. Use d(sin(x))/dx = cos(x)
+# Compute some linear approximations. Use d(sin(x)) / dx = cos(x)
 for x0 in [-1.5, 0, 2]:
     plots.append(np.sin(x0) + (xs - x0) * np.cos(x0))
 
 d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
 ```
 
+```{.python .input}
+#@tab pytorch
+# Compute sin
+xs = torch.arange(-torch.pi, torch.pi, 0.01)
+plots = [torch.sin(xs)]
+
+# Compute some linear approximations. Use d(sin(x))/dx = cos(x)
+for x0 in [-1.5, 0.0, 2.0]:
+    plots.append(torch.sin(torch.tensor(x0)) + (xs - x0) * 
+                 torch.cos(torch.tensor(x0)))
+
+d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
+```
+
+```{.python .input}
+#@tab tensorflow
+# Compute sin
+xs = tf.range(-tf.pi, tf.pi, 0.01)
+plots = [tf.sin(xs)]
+
+# Compute some linear approximations. Use d(sin(x))/dx = cos(x)
+for x0 in [-1.5, 0.0, 2.0]:
+    plots.append(tf.sin(tf.constant(x0)) + (xs - x0) * 
+                 tf.cos(tf.constant(x0)))
+
+d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
+```
+
 ### Higher Order Derivatives
 
-Let's now do something that may on the surface seem strange.  Take a function $f$ and compute the derivative $\frac{df}{dx}$.  This gives us the rate of change of $f$ at any point.
+Let us now do something that may on the surface seem strange.  Take a function $f$ and compute the derivative $\frac{df}{dx}$.  This gives us the rate of change of $f$ at any point.
 
 However, the derivative, $\frac{df}{dx}$, can be viewed as a function itself, so nothing stops us from computing the derivative of $\frac{df}{dx}$ to get $\frac{d^2f}{dx^2} = \frac{df}{dx}\left(\frac{df}{dx}\right)$.  We will call this the second derivative of $f$.  This function is the rate of change of the rate of change of $f$, or in other words, how the rate of change is changing. We may apply the derivative any number of times to obtain what is called the $n$-th derivative. To keep the notation clean, we will denote the $n$-th derivative as 
 
@@ -224,7 +312,7 @@ $$
 f^{(n)}(x) = \frac{d^{n}f}{dx^{n}} = \left(\frac{d}{dx}\right)^{n} f.
 $$
 
-Let's try to understand *why* this is a useful notion.  Below, we visualize $f^{(2)}(x)$, $f^{(1)}(x)$, and $f(x)$.  
+Let us try to understand *why* this is a useful notion.  Below, we visualize $f^{(2)}(x)$, $f^{(1)}(x)$, and $f(x)$.  
 
 First, consider the case that the second derivative $f^{(2)}(x)$ is a positive constant.  This means that the slope of the first derivative is positive.  As a result, the first derivative $f^{(1)}(x)$ may start out negative, becomes zero at a point, and then becomes positive in the end. This tells us the slope of our original function $f$ and therefore, the function $f$ itself decreases, flattens out, then increases.  In other words, the function $f$ curves up, and has a single minimum as is shown in :numref:`fig_positive-second`.
 
@@ -245,7 +333,7 @@ Third, if the second derivative is a always zero, then the first derivative will
 
 To summarize, the second derivative can be interpreted as describing the way that the function $f$ curves.  A positive second derivative leads to a upwards curve, while a negative second derivative means that $f$ curves downwards, and a zero second derivative means that $f$ does not curve at all.
 
-Let's take this one step further. Consider the function $g(x) = ax^{2}+ bx + c$.  We can then compute that
+Let us take this one step further. Consider the function $g(x) = ax^{2}+ bx + c$.  We can then compute that
 
 $$
 \begin{aligned}
@@ -254,17 +342,47 @@ $$
 \end{aligned}
 $$
 
-If we have some original function $f(x)$ in mind, we may compute the first two derivatives and find the values for $a, b$, and $c$ that make them match this computation.  Similarly to the previous section where we saw that the first derivative gave the best approximation with a straight line, this construction provides the best approximation by a quadratic.  Let's visualize this for $f(x) = \sin(x)$.
+If we have some original function $f(x)$ in mind, we may compute the first two derivatives and find the values for $a, b$, and $c$ that make them match this computation.  Similarly to the previous section where we saw that the first derivative gave the best approximation with a straight line, this construction provides the best approximation by a quadratic.  Let us visualize this for $f(x) = \sin(x)$.
 
 ```{.python .input}
 # Compute sin
 xs = np.arange(-np.pi, np.pi, 0.01)
 plots = [np.sin(xs)]
 
-# Compute some quadratic approximations. Use d(sin(x))/dx = cos(x)
+# Compute some quadratic approximations. Use d(sin(x)) / dx = cos(x)
 for x0 in [-1.5, 0, 2]:
     plots.append(np.sin(x0) + (xs - x0) * np.cos(x0) -
                               (xs - x0)**2 * np.sin(x0) / 2)
+
+d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
+```
+
+```{.python .input}
+#@tab pytorch
+# Compute sin
+xs = torch.arange(-torch.pi, torch.pi, 0.01)
+plots = [torch.sin(xs)]
+
+# Compute some quadratic approximations. Use d(sin(x)) / dx = cos(x)
+for x0 in [-1.5, 0.0, 2.0]:
+    plots.append(torch.sin(torch.tensor(x0)) + (xs - x0) * 
+                 torch.cos(torch.tensor(x0)) - (xs - x0)**2 *
+                 torch.sin(torch.tensor(x0)) / 2)
+
+d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
+```
+
+```{.python .input}
+#@tab tensorflow
+# Compute sin
+xs = tf.range(-tf.pi, tf.pi, 0.01)
+plots = [tf.sin(xs)]
+
+# Compute some quadratic approximations. Use d(sin(x)) / dx = cos(x)
+for x0 in [-1.5, 0.0, 2.0]:
+    plots.append(tf.sin(tf.constant(x0)) + (xs - x0) * 
+                 tf.cos(tf.constant(x0)) - (xs - x0)**2 *
+                 tf.sin(tf.constant(x0)) / 2)
 
 d2l.plot(xs, plots, 'x', 'f(x)', ylim=[-1.5, 1.5])
 ```
@@ -320,7 +438,7 @@ $$
 e^{x} = \sum_{n = 0}^\infty \frac{x^{n}}{n!} = 1 + x + \frac{x^2}{2} + \frac{x^3}{6} + \cdots.
 $$
 
-Let's see how this works in code and observe how increasing the degree of the Taylor approximation brings us closer to the desired function $e^x$.
+Let us see how this works in code and observe how increasing the degree of the Taylor approximation brings us closer to the desired function $e^x$.
 
 ```{.python .input}
 # Compute the exponential function
@@ -337,9 +455,41 @@ d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
     "Degree 5 Taylor Series"])
 ```
 
+```{.python .input}
+#@tab pytorch
+# Compute the exponential function
+xs = torch.arange(0, 3, 0.01)
+ys = torch.exp(xs)
+
+# Compute a few Taylor series approximations
+P1 = 1 + xs
+P2 = 1 + xs + xs**2 / 2
+P5 = 1 + xs + xs**2 / 2 + xs**3 / 6 + xs**4 / 24 + xs**5 / 120
+
+d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
+    "Exponential", "Degree 1 Taylor Series", "Degree 2 Taylor Series",
+    "Degree 5 Taylor Series"])
+```
+
+```{.python .input}
+#@tab tensorflow
+# Compute the exponential function
+xs = tf.range(0, 3, 0.01)
+ys = tf.exp(xs)
+
+# Compute a few Taylor series approximations
+P1 = 1 + xs
+P2 = 1 + xs + xs**2 / 2
+P5 = 1 + xs + xs**2 / 2 + xs**3 / 6 + xs**4 / 24 + xs**5 / 120
+
+d2l.plot(xs, [ys, P1, P2, P5], 'x', 'f(x)', legend=[
+    "Exponential", "Degree 1 Taylor Series", "Degree 2 Taylor Series",
+    "Degree 5 Taylor Series"])
+```
+
 Taylor series have two primary applications:
 
-1. *Theoretical applications*: Often when we try to understand a too complex function, using Taylor series enables we turn it into a polynomial that we can work with directly.
+1. *Theoretical applications*: Often when we try to understand a too complex function, using Taylor series enables us to turn it into a polynomial that we can work with directly.
 
 2. *Numerical applications*: Some functions like $e^{x}$ or $\cos(x)$ are  difficult for machines to compute.  They can store tables of values at a fixed precision (and this is often done), but it still leaves open questions like "What is the 1000-th digit of $\cos(1)$?"  Taylor series are often helpful to answer such questions.  
 
@@ -349,7 +499,7 @@ Taylor series have two primary applications:
 * Derivatives can be used to express how functions change when we change the input by a small amount.
 * Elementary derivatives can be combined using derivative rules to create arbitrarily complex derivatives.
 * Derivatives can be iterated to get second or higher order derivatives.  Each increase in order provides more fine grained information on the behavior of the function.
-* Using information in the derivatives of a single data point, we can approximate well behaved functions by polynomials obtained from the Taylor series.
+* Using information in the derivatives of a single data example, we can approximate well behaved functions by polynomials obtained from the Taylor series.
 
 
 ## Exercises
@@ -360,6 +510,15 @@ Taylor series have two primary applications:
 4. Where is the minimum of $f(x) = x\log(x)$ for $x\ge0$ (where we assume that $f$ takes the limiting value of $0$ at $f(0)$)?
 
 
-## [Discussions](https://discuss.mxnet.io/t/5149)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/412)
+:end_tab:
 
-![](../img/qr_single-variable-calculus.svg)
+:begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1088)
+:end_tab:
+
+
+:begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1089)
+:end_tab:

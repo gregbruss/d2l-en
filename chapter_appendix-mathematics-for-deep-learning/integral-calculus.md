@@ -6,11 +6,11 @@ Differentiation only makes up half of the content of a traditional calculus educ
 At the level of machine learning we discuss in this book, we will not need a deep understanding of integration. However, we will provide a brief introduction to lay the groundwork for any further applications we will encounter later on.
 
 ## Geometric Interpretation
-Suppose that we have a function $f(x)$.  For simplicity, let's assume that $f(x)$ is non-negative (never takes a value less than zero).  What we want to try and understand is: what is the area contained between $f(x)$ and the $x$-axis?
+Suppose that we have a function $f(x)$.  For simplicity, let us assume that $f(x)$ is non-negative (never takes a value less than zero).  What we want to try and understand is: what is the area contained between $f(x)$ and the $x$-axis?
 
 ```{.python .input}
 %matplotlib inline
-import d2l
+from d2l import mxnet as d2l
 from IPython import display
 from mpl_toolkits import mplot3d
 from mxnet import np, npx
@@ -22,6 +22,40 @@ f = np.exp(-x**2)
 d2l.set_figsize()
 d2l.plt.plot(x, f, color='black')
 d2l.plt.fill_between(x.tolist(), f.tolist())
+d2l.plt.show()
+```
+
+```{.python .input}
+#@tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+from IPython import display
+from mpl_toolkits import mplot3d
+import torch
+
+x = torch.arange(-2, 2, 0.01)
+f = torch.exp(-x**2)
+
+d2l.set_figsize()
+d2l.plt.plot(x, f, color='black')
+d2l.plt.fill_between(x.tolist(), f.tolist())
+d2l.plt.show()
+```
+
+```{.python .input}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+from IPython import display
+from mpl_toolkits import mplot3d
+import tensorflow as tf
+
+x = tf.range(-2, 2, 0.01)
+f = tf.exp(-x**2)
+
+d2l.set_figsize()
+d2l.plt.plot(x, f, color='black')
+d2l.plt.fill_between(x.numpy(), f.numpy())
 d2l.plt.show()
 ```
 
@@ -37,6 +71,28 @@ d2l.plt.fill_between(x.tolist()[50:250], f.tolist()[50:250])
 d2l.plt.show()
 ```
 
+```{.python .input}
+#@tab pytorch
+x = torch.arange(-2, 2, 0.01)
+f = torch.exp(-x**2)
+
+d2l.set_figsize()
+d2l.plt.plot(x, f, color='black')
+d2l.plt.fill_between(x.tolist()[50:250], f.tolist()[50:250])
+d2l.plt.show()
+```
+
+```{.python .input}
+#@tab tensorflow
+x = tf.range(-2, 2, 0.01)
+f = tf.exp(-x**2)
+
+d2l.set_figsize()
+d2l.plt.plot(x, f, color='black')
+d2l.plt.fill_between(x.numpy()[50:250], f.numpy()[50:250])
+d2l.plt.show()
+```
+
 We will denote this area by the integral symbol below:
 
 $$
@@ -49,7 +105,7 @@ $$
 \int_a^b f(x) \;dx = \int_a^b f(z) \;dz.
 $$
 
-There is a traditional way to try and understand how we might try to approximate such integrals: we can imaging taking the region in-between $a$ and $b$ and chopping it into $N$ vertical slices.  If $N$ is large, we can approximate the area of each slice by a rectangle, and then add up the areas to get the total area under the curve.  Let's take a look at an example doing this in code.  We will see how to get the true value in a later section.
+There is a traditional way to try and understand how we might try to approximate such integrals: we can imagine taking the region in-between $a$ and $b$ and chopping it into $N$ vertical slices.  If $N$ is large, we can approximate the area of each slice by a rectangle, and then add up the areas to get the total area under the curve.  Let us take a look at an example doing this in code.  We will see how to get the true value in a later section.
 
 ```{.python .input}
 epsilon = 0.05
@@ -68,7 +124,49 @@ d2l.plt.plot(x, f, color='black')
 d2l.plt.ylim([0, 1])
 d2l.plt.show()
 
-"Approximation: {}, Truth: {}".format(approx, true)
+f'approximation: {approx}, truth: {true}'
+```
+
+```{.python .input}
+#@tab pytorch
+epsilon = 0.05
+a = 0
+b = 2
+
+x = torch.arange(a, b, epsilon)
+f = x / (1 + x**2)
+
+approx = torch.sum(epsilon*f)
+true = torch.log(torch.tensor([5.])) / 2
+
+d2l.set_figsize()
+d2l.plt.bar(x, f, width=epsilon, align='edge')
+d2l.plt.plot(x, f, color='black')
+d2l.plt.ylim([0, 1])
+d2l.plt.show()
+
+f'approximation: {approx}, truth: {true}'
+```
+
+```{.python .input}
+#@tab tensorflow
+epsilon = 0.05
+a = 0
+b = 2
+
+x = tf.range(a, b, epsilon)
+f = x / (1 + x**2)
+
+approx = tf.reduce_sum(epsilon*f)
+true = tf.math.log(tf.constant([5.])) / 2
+
+d2l.set_figsize()
+d2l.plt.bar(x, f, width=epsilon, align='edge')
+d2l.plt.plot(x, f, color='black')
+d2l.plt.ylim([0, 1])
+d2l.plt.show()
+
+f'approximation: {approx}, truth: {true}'
 ```
 
 The issue is that while it can be done numerically, we can do this approach analytically for only the simplest functions like
@@ -89,7 +187,7 @@ We will instead take a different approach.  We will work intuitively with the no
 
 ## The Fundamental Theorem of Calculus
 
-To dive deeper into the theory of integration, let's introduce a function 
+To dive deeper into the theory of integration, let us introduce a function 
 
 $$
 F(x) = \int_0^x f(y) dy.
@@ -106,9 +204,9 @@ This is a mathematical encoding of the fact that we can measure the area out to 
 ![Visualizing why we may reduce the problem of computing the area under a curve between two points to computing the area to the left of a point.](../img/SubArea.svg)
 :label:`fig_area-subtract`
 
-Thus, if we can figure out what the integral over any interval is by figuring out what $F(x)$ is.  
+Thus, we can figure out what the integral over any interval is by figuring out what $F(x)$ is.  
 
-To do so, let's consider an experiment.  As we often do in calculus, let's imaging what happens when we shift the value by a tiny bit.  From the comment above, we know that
+To do so, let us consider an experiment.  As we often do in calculus, let us imagine what happens when we shift the value by a tiny bit.  From the comment above, we know that
 
 $$
 F(x+\epsilon) - F(x) = \int_x^{x+\epsilon} f(y) \; dy.
@@ -132,13 +230,13 @@ This is the *fundamental theorem of calculus*.  We may write it in expanded form
 $$\frac{d}{dx}\int_{-\infty}^x f(y) \; dy = f(x).$$
 :eqlabel:`eq_ftc`
 
-It takes the concept of finding areas (*a priori* rather hard), and reduces it to a statement derivatives (something much more completely understood).  One last comment that we must make is that this does not tell we exactly what $F(x)$.  Indeed $F(x) + C$ for any $C$ has the same derivative.  This is a fact-of-life in the theory of integration.  Thankfully, notice that when working with definite integrals, the constants drop out, and thus are irrelevant to the outcome.
+It takes the concept of finding areas (*a priori* rather hard), and reduces it to a statement derivatives (something much more completely understood).  One last comment that we must make is that this does not tell us exactly what $F(x)$ is.  Indeed $F(x) + C$ for any $C$ has the same derivative.  This is a fact-of-life in the theory of integration.  Thankfully, notice that when working with definite integrals, the constants drop out, and thus are irrelevant to the outcome.
 
 $$
 \int_a^b f(x) \; dx = (F(b) + C) - (F(a) + C) = F(b) - F(a).
 $$
 
-This may seem like abstract non-sense, but let's take a moment to appreciate that it has given us a whole new perspective on computing integrals.  Our goal is no-longer to do some sort of chop-and-sum process to try and recover the area, rather we need only find a function whose derivative is the function we have!  This is incredible since we can now list many rather difficult integrals by just reversing the table from :numref:`sec_derivative_table`.  For instance, we know that the derivative of $x^{n}$ is $nx^{n-1}$.  Thus, we can say using the fundamental theorem :eqref:`eq_ftc` that
+This may seem like abstract non-sense, but let us take a moment to appreciate that it has given us a whole new perspective on computing integrals.  Our goal is no-longer to do some sort of chop-and-sum process to try and recover the area, rather we need only find a function whose derivative is the function we have!  This is incredible since we can now list many rather difficult integrals by just reversing the table from :numref:`sec_derivative_table`.  For instance, we know that the derivative of $x^{n}$ is $nx^{n-1}$.  Thus, we can say using the fundamental theorem :eqref:`eq_ftc` that
 
 $$
 \int_0^{x} ny^{n-1} \; dy = x^n - 0^n = x^n.
@@ -163,22 +261,22 @@ $$
 F(x) = \int_0^x f(y) \; dy.
 $$ 
 
-Let's suppose that we want to know how this function looks when we compose it with another to obtain $F(u(x))$.  By the chain rule, we know
+Let us suppose that we want to know how this function looks when we compose it with another to obtain $F(u(x))$.  By the chain rule, we know
 
 $$
-\frac{d}{dx}F(u(x)) = \frac{dF}{dx}(u(x))\cdot \frac{du}{dx}.
+\frac{d}{dx}F(u(x)) = \frac{dF}{du}(u(x))\cdot \frac{du}{dx}.
 $$
 
 We can turn this into a statement about integration by using the fundamental theorem :eqref:`eq_ftc` as above.  This gives
 
 $$
-F(u(x)) - F(u(0)) = \int_0^x \frac{dF}{dx}(u(y))\cdot \frac{du}{dy} \;dy.
+F(u(x)) - F(u(0)) = \int_0^x \frac{dF}{du}(u(y))\cdot \frac{du}{dy} \;dy.
 $$
 
 Recalling that $F$ is itself an integral gives that the left hand side may be rewritten to be
 
 $$
-\int_{u(0)}^{u(x)} f(y) \; dy = \int_0^x \frac{dF}{dx}(u(y))\cdot \frac{du}{dy} \;dy.
+\int_{u(0)}^{u(x)} f(y) \; dy = \int_0^x \frac{dF}{du}(u(y))\cdot \frac{du}{dy} \;dy.
 $$
 
 Similarly, recalling that $F$ is an integral allows us to recognize that $\frac{dF}{dx} = f$ using the fundamental theorem :eqref:`eq_ftc`, and thus we may conclude
@@ -188,7 +286,7 @@ $$\int_{u(0)}^{u(x)} f(y) \; dy = \int_0^x f(u(y))\cdot \frac{du}{dy} \;dy.$$
 
 This is the *change of variables* formula.
 
-For a more intuitive derivation, consider what happens when we take an integral of $f(u(x))$ between $x$ and $x+\epsilon$. For a small $\epsilon$, this integral is approximately $\epsilon f(u(x))$, the area of the associated rectangle.  Now, let's compare this with the integral of $f(y)$ from $u(x)$ to $u(x+\epsilon)$.  We know that $u(x+\epsilon) \approx u(x) + \epsilon \frac{du}{dx}(x)$, so the area of this rectangle is approximately $\epsilon \frac{du}{dx}(x)f(u(x))$.  Thus, to make the area of these two rectangles to agree, we need to multiply the first one by $\frac{du}{dx}(x)$ as is illustrated in :numref:`fig_rect-transform`.  
+For a more intuitive derivation, consider what happens when we take an integral of $f(u(x))$ between $x$ and $x+\epsilon$. For a small $\epsilon$, this integral is approximately $\epsilon f(u(x))$, the area of the associated rectangle.  Now, let us compare this with the integral of $f(y)$ from $u(x)$ to $u(x+\epsilon)$.  We know that $u(x+\epsilon) \approx u(x) + \epsilon \frac{du}{dx}(x)$, so the area of this rectangle is approximately $\epsilon \frac{du}{dx}(x)f(u(x))$.  Thus, to make the area of these two rectangles to agree, we need to multiply the first one by $\frac{du}{dx}(x)$ as is illustrated in :numref:`fig_rect-transform`.  
 
 ![Visualizing the transformation of a single thin rectangle under the change of variables.](../img/RectTrans.svg)
 :label:`fig_rect-transform`
@@ -201,7 +299,7 @@ $$
 
 This is the change of variables formula expressed for a single small rectangle.
 
-If $u(x)$ and $f(x)$ are properly chosen, this can allow for the computation of incredibly complex integrals.  For instance, if we even chose $f(y) = 1$ and $u(x) = e^{-x^{2}}$ (which means $\frac{du}{dx}(x) = -2xe^{-x^{2}}$, this can show for instance that
+If $u(x)$ and $f(x)$ are properly chosen, this can allow for the computation of incredibly complex integrals.  For instance, if we even chose $f(y) = 1$ and $u(x) = e^{-x^{2}}$ (which means $\frac{du}{dx}(x) = -2xe^{-x^{2}}$), this can show for instance that
 
 $$
 e^{-1} - 1 = \int_{e^{-0}}^{e^{-1}} 1 \; dy = -2\int_0^{1} ye^{-y^2}\;dy,
@@ -266,19 +364,59 @@ ax.set_zlim(0, 1)
 ax.dist = 12
 ```
 
+```{.python .input}
+#@tab pytorch
+# Construct grid and compute function
+x, y = torch.meshgrid(torch.linspace(-2, 2, 101), torch.linspace(-2, 2, 101))
+z = torch.exp(- x**2 - y**2)
+
+# Plot function
+ax = d2l.plt.figure().add_subplot(111, projection='3d')
+ax.plot_wireframe(x, y, z)
+d2l.plt.xlabel('x')
+d2l.plt.ylabel('y')
+d2l.plt.xticks([-2, -1, 0, 1, 2])
+d2l.plt.yticks([-2, -1, 0, 1, 2])
+d2l.set_figsize()
+ax.set_xlim(-2, 2)
+ax.set_ylim(-2, 2)
+ax.set_zlim(0, 1)
+ax.dist = 12
+```
+
+```{.python .input}
+#@tab tensorflow
+# Construct grid and compute function
+x, y = tf.meshgrid(tf.linspace(-2., 2., 101), tf.linspace(-2., 2., 101))
+z = tf.exp(- x**2 - y**2)
+
+# Plot function
+ax = d2l.plt.figure().add_subplot(111, projection='3d')
+ax.plot_wireframe(x, y, z)
+d2l.plt.xlabel('x')
+d2l.plt.ylabel('y')
+d2l.plt.xticks([-2, -1, 0, 1, 2])
+d2l.plt.yticks([-2, -1, 0, 1, 2])
+d2l.set_figsize()
+ax.set_xlim(-2, 2)
+ax.set_ylim(-2, 2)
+ax.set_zlim(0, 1)
+ax.dist = 12
+```
+
 We write this as 
 
 $$
 \int_{[a, b]\times[c, d]} f(x, y)\;dx\;dy.
 $$
 
-Suppose that we wish to compute this integral.  My claim is that we can do this by iteratively computing first the integral in say $x$ and then shifting to the integral in $y$, that is to say
+Suppose that we wish to compute this integral.  My claim is that we can do this by iteratively computing first the integral in $x$ and then shifting to the integral in $y$, that is to say
 
 $$
 \int_{[a, b]\times[c, d]} f(x, y)\;dx\;dy = \int_c^{d} \left(\int_a^{b} f(x, y) \;dx\right) \; dy.
 $$
 
-Let's see why this is.  
+Let us see why this is.  
 
 Consider the figure above where we have split the function into $\epsilon \times \epsilon$ squares which we will index with integer coordinates $i, j$.  In this case, our integral is approximately
 
@@ -328,7 +466,7 @@ $$
 $$
 
 ## Change of Variables in Multiple Integrals
-As we with single variables in :eqref:`eq_change_var`, the ability to change variables inside a higher dimensional integral is a key tool.  Let's summarize the result without derivation.  
+As with single variables in :eqref:`eq_change_var`, the ability to change variables inside a higher dimensional integral is a key tool.  Let us summarize the result without derivation.  
 
 We need a function that reparameterizes our domain of integration.  We can take this to be $\phi : \mathbb{R}^n \rightarrow \mathbb{R}^n$, that is any function which takes in $n$ real variables and returns another $n$.  To keep the expressions clean, we will assume that $\phi$ is *injective* which is to say it never folds over itself ($\phi(\mathbf{x}) = \phi(\mathbf{y}) \implies \mathbf{x} = \mathbf{y}$).  
 
@@ -348,11 +486,11 @@ D\boldsymbol{\phi} = \begin{bmatrix}
 \end{bmatrix}.
 $$
 
-Looking closely, we see that this is similar to the single variable chain rule :eqref:`eq_change_var`, except we have replaced the term $\frac{du}{dx}(x)$ with $\left|\det(D\phi(\mathbf{x}))\right|$.  Let's see how we can to interpret this term.  Recall that the $\frac{du}{dx}(x)$ term existed to say how much we stretched our $x$-axis by applying $u$.  The same process in higher dimensions is to determine how much we stretch the area (or volume, or hyper-volume) of a little square (or little *hyper-cube*) by applying $\boldsymbol{\phi}$.  If $\boldsymbol{\phi}$ was the multiplication by a matrix, then we know how the determinant already gives the answer.  
+Looking closely, we see that this is similar to the single variable chain rule :eqref:`eq_change_var`, except we have replaced the term $\frac{du}{dx}(x)$ with $\left|\det(D\phi(\mathbf{x}))\right|$.  Let us see how we can to interpret this term.  Recall that the $\frac{du}{dx}(x)$ term existed to say how much we stretched our $x$-axis by applying $u$.  The same process in higher dimensions is to determine how much we stretch the area (or volume, or hyper-volume) of a little square (or little *hyper-cube*) by applying $\boldsymbol{\phi}$.  If $\boldsymbol{\phi}$ was the multiplication by a matrix, then we know how the determinant already gives the answer.  
 
 With some work, one can show that the *Jacobian* provides the best approximation to a multivariable function $\boldsymbol{\phi}$ at a point by a matrix in the same way we could approximate by lines or planes with derivatives and gradients. Thus the determinant of the Jacobian exactly mirrors the scaling factor we identified in one dimension.
 
-It takes some work to fill in the details to this, so do not worry if they are not clear now.  Let's see at least one example we will make use of later on.  Consider the integral
+It takes some work to fill in the details to this, so do not worry if they are not clear now.  Let us see at least one example we will make use of later on.  Consider the integral
 
 $$
 \int _ {-\infty}^{\infty} \int _ {-\infty}^{\infty} e^{-x^{2}-y^{2}} \;dx\;dy.
@@ -395,6 +533,15 @@ We will meet this integral again when we study continuous random variables in :n
 3. What is $\int_{[0,1]^2} xy \;dx\;dy$?
 4. Use the change of variables formula to compute $\int_0^2\int_0^1xy(x^2-y^2)/(x^2+y^2)^3\;dy\;dx$ and $\int_0^1\int_0^2f(x, y) = xy(x^2-y^2)/(x^2+y^2)^3\;dx\;dy$ to see they are different.
 
-## [Discussions](https://discuss.mxnet.io/t/5151)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/414)
+:end_tab:
 
-![](../img/qr_integral-calculus.svg)
+:begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1092)
+:end_tab:
+
+
+:begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1093)
+:end_tab:

@@ -5,7 +5,7 @@ One of the most commonly encountered way of thinking in machine learning is the 
 
 ## The Maximum Likelihood Principle
 
-This has a Bayesian interpretation which can be helpful to think about.  Suppose that we have a model with parameters $\boldsymbol{\theta}$ and a collection of data points $X$.  For concreteness, we can imagine that $\boldsymbol{\theta}$ is a single value representing the probability that a coin comes up heads when flipped, and $X$ is a sequence of independent coin flips.  We will look at this example in depth later.
+This has a Bayesian interpretation which can be helpful to think about.  Suppose that we have a model with parameters $\boldsymbol{\theta}$ and a collection of data examples $X$.  For concreteness, we can imagine that $\boldsymbol{\theta}$ is a single value representing the probability that a coin comes up heads when flipped, and $X$ is a sequence of independent coin flips.  We will look at this example in depth later.
 
 If we want to find the most likely value for the parameters of our model, that means we want to find
 
@@ -28,7 +28,7 @@ As a matter of common terminology, the probability of the data given the paramet
 
 ### A Concrete Example
 
-Let's see how this works in a concrete example.  Suppose that we have a single parameter $\theta$ representing the probability that a coin flip is heads.  Then the probability of getting a tails is $1-\theta$, and so if our observed data $X$ is a sequence with $n_H$ heads and $n_T$ tails, we can use the fact that independent probabilities multiply to see that 
+Let us see how this works in a concrete example.  Suppose that we have a single parameter $\theta$ representing the probability that a coin flip is heads.  Then the probability of getting a tails is $1-\theta$, and so if our observed data $X$ is a sequence with $n_H$ heads and $n_T$ tails, we can use the fact that independent probabilities multiply to see that 
 
 $$
 P(X \mid \theta) = \theta^{n_H}(1-\theta)^{n_T}.
@@ -46,11 +46,35 @@ For our example, the plot of $P(X \mid \theta)$ is as follows:
 
 ```{.python .input}
 %matplotlib inline
-import d2l
+from d2l import mxnet as d2l
 from mxnet import autograd, np, npx
 npx.set_np()
 
 theta = np.arange(0, 1, 0.001)
+p = theta**9 * (1 - theta)**4.
+
+d2l.plot(theta, p, 'theta', 'likelihood')
+```
+
+```{.python .input}
+#@tab pytorch
+%matplotlib inline
+from d2l import torch as d2l
+import torch
+
+theta = torch.arange(0, 1, 0.001)
+p = theta**9 * (1 - theta)**4.
+
+d2l.plot(theta, p, 'theta', 'likelihood')
+```
+
+```{.python .input}
+#@tab tensorflow
+%matplotlib inline
+from d2l import tensorflow as d2l
+import tensorflow as tf
+
+theta = tf.range(0, 1, 0.001)
 p = theta**9 * (1 - theta)**4.
 
 d2l.plot(theta, p, 'theta', 'likelihood')
@@ -71,9 +95,9 @@ This has three solutions: $0$, $1$ and $9/13$.  The first two are clearly minima
 
 ## Numerical Optimization and the Negative Log-Likelihood
 
-The previous example is nice, but what if we have billions of parameters and data points.
+The previous example is nice, but what if we have billions of parameters and data examples.
 
-First notice that, if we make the assumption that all the data points are independent, we can no longer practically consider the likelihood itself as it is a product of many probabilities.  Indeed, each probability is in $[0,1]$, say typically of value about $1/2$, and the product of $(1/2)^{1000000000}$ is far below machine precision.  We cannot work with that directly.  
+First notice that, if we make the assumption that all the data examples are independent, we can no longer practically consider the likelihood itself as it is a product of many probabilities.  Indeed, each probability is in $[0,1]$, say typically of value about $1/2$, and the product of $(1/2)^{1000000000}$ is far below machine precision.  We cannot work with that directly.  
 
 However, recall that the logarithm turns products to sums, in which case 
 
@@ -120,6 +144,48 @@ for iter in range(10):
 theta, n_H / (n_H + n_T)
 ```
 
+```{.python .input}
+#@tab pytorch
+# Set up our data
+n_H = 8675309
+n_T = 25624
+
+# Initialize our paramteres
+theta = torch.tensor(0.5, requires_grad=True)
+
+# Perform gradient descent
+lr = 0.00000000001
+for iter in range(10):
+    loss = -(n_H * torch.log(theta) + n_T * torch.log(1 - theta))
+    loss.backward()
+    with torch.no_grad():
+        theta -= lr * theta.grad
+    theta.grad.zero_()
+
+# Check output
+theta, n_H / (n_H + n_T)
+```
+
+```{.python .input}
+#@tab tensorflow
+# Set up our data
+n_H = 8675309
+n_T = 25624
+
+# Initialize our paramteres
+theta = tf.Variable(tf.constant(0.5))
+
+# Perform gradient descent
+lr = 0.00000000001
+for iter in range(10):
+    with tf.GradientTape() as t:
+        loss = -(n_H * tf.math.log(theta) + n_T * tf.math.log(1 - theta))
+    theta.assign_sub(lr * t.gradient(loss, theta))
+
+# Check output
+theta, n_H / (n_H + n_T)
+```
+
 Numerical convenience is only one reason people like to use negative log-likelihoods.  Indeed, there are a several reasons that it can be preferable.
 
 
@@ -161,7 +227,7 @@ $$
 H(p) = -\sum_{i} p_i \log_2(p_i),
 $$
 
-which measures the randomness of a source. Notice that this is nothing more than the average $-\log$ probability, and thus if we take our negative log-likelihood and divide by the number of data points, we get a relative of entropy known as cross-entropy.  This theoretical interpretation alone would be sufficiently compelling to motivate reporting the average negative log-likelihood over the dataset as a way of measuring model performance.
+which measures the randomness of a source. Notice that this is nothing more than the average $-\log$ probability, and thus if we take our negative log-likelihood and divide by the number of data examples, we get a relative of entropy known as cross-entropy.  This theoretical interpretation alone would be sufficiently compelling to motivate reporting the average negative log-likelihood over the dataset as a way of measuring model performance.
 
 ## Maximum Likelihood for Continuous Variables
 
@@ -177,7 +243,7 @@ The question becomes, "Why is this OK?"  After all, the reason we introduced den
 
 Indeed, this is the case, and understanding why we can shift to densities is an exercise in tracing what happens to the epsilons.
 
-Let's first re-define our goal.  Suppose that for continuous random variables we no longer want to compute the probability of getting exactly the right value, but instead matching to within some range $\epsilon$.  For simplicity, we assume our data is repeated observations $x_1, \ldots, x_N$ of identically distributed random variables $X_1, \ldots, X_N$.  As we have seen previously, this can be written as
+Let us first re-define our goal.  Suppose that for continuous random variables we no longer want to compute the probability of getting exactly the right value, but instead matching to within some range $\epsilon$.  For simplicity, we assume our data is repeated observations $x_1, \ldots, x_N$ of identically distributed random variables $X_1, \ldots, X_N$.  As we have seen previously, this can be written as
 
 $$
 \begin{aligned}
@@ -213,6 +279,14 @@ Thus, we see that the maximum likelihood point of view can operate with continuo
 2. Suppose that you have a dataset of samples $\{x_i\}_{i=1}^N$ drawn from a Gaussian with unknown mean, but variance $1$.  What is the maximum likelihood estimate for the mean?
 
 
-## [Discussions](https://discuss.mxnet.io/t/5153)
+:begin_tab:`mxnet`
+[Discussions](https://discuss.d2l.ai/t/416)
+:end_tab:
 
-![](../img/qr_maximum-likelihood.svg)
+:begin_tab:`pytorch`
+[Discussions](https://discuss.d2l.ai/t/1096)
+:end_tab:
+
+:begin_tab:`tensorflow`
+[Discussions](https://discuss.d2l.ai/t/1097)
+:end_tab:
